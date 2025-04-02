@@ -1,42 +1,74 @@
 using System.Numerics;
-using Raylib_cs;
 
-namespace Ation.Systems;
+using Ation.Common;
+
+namespace Ation.ParticleSimulation;
 
 class Cell
 {
     public bool Occupied { get; set; } = false;
 }
 
+enum ParticleType
+{
+    Empty,
+    Sand,
+    Water,
+    Steam,
+    Solid
+}
+
+struct ParticleProperties
+{
+    public Raylib_cs.Color Color;
+}
+
 class ParticleSim
 {
-    public Cell[,] grid = new Cell[500, 500];
+    private ParticleType[,] grid = new ParticleType[
+        (int)Variables.WindowHeight / Variables.PixelSize,
+        (int)Variables.WindowWidth / Variables.PixelSize
+        ];
+
+    public Dictionary<ParticleType, ParticleProperties> particleProperties = new()
+    {
+        [ParticleType.Empty] = new ParticleProperties { Color = new Raylib_cs.Color(0, 0, 0, 0) },
+        [ParticleType.Sand] = new ParticleProperties { Color = Raylib_cs.Color.Yellow },
+    };
     public ParticleSim() { }
 
+    public void Init()
+    {
+        // fill grid with 'empty' particles
+        for (int y = 0; y < grid.GetLength(0); y++)
+        {
+            for (int x = 0; x < grid.GetLength(1); x++)
+            {
+                grid[y, x] = ParticleType.Empty;
+            }
+        }
+
+
+
+    }
     public void Update(float dt)
     {
-        for (int i = grid.GetLength(0) - 1; i >= 0; i--)
+        for (int y = grid.GetLength(0) - 1; y >= 0; y--)
         {
-            for (int j = grid.GetLength(1) - 1; j >= 0; j--)
+            for (int x = grid.GetLength(1) - 1; x >= 0; x--)
             {
-                if (grid[i, j] != null)
+                if (grid[y, x] != ParticleType.Empty)
                 {
-                    processSand(i, j);
+                    processSand(x, y);
                 }
             }
         }
     }
+
     private void processSand(int i, int j)
     {
         // TODO Implement
     }
-    private bool PositionInScreenBounds(Vector2 pos)
-    {
-        if (pos.X > 0 || pos.X < 500 || pos.Y > 0 || pos.Y < 500)
-            return true;
-        return false;
-    }
-
     private void SwapCells(int origX, int origY, int x, int y)
     {
         //     if (origX < 0 || origX >= gridWidth || origY < 0 || origY >= gridHeight ||
@@ -46,78 +78,76 @@ class ParticleSim
         //         return;
         //     }
 
-        Cell temp = grid[x, y];
-        grid[x, y] = grid[origX, origY];
-        grid[origX, origY] = temp;
+        //Cell temp = grid[x, y];
+        //grid[x, y] = grid[origX, origY];
+        //grid[origX, origY] = temp;
     }
     public void Render()
     {
-        Raylib.BeginDrawing();
-        Raylib.ClearBackground(Color.LightGray);
+
+        int gridHeight = grid.GetLength(0);
+        int gridWidth = grid.GetLength(1);
+
+        Raylib_cs.Raylib.BeginDrawing();
+        Raylib_cs.Raylib.ClearBackground(Raylib_cs.Color.LightGray);
 
 
 
-        // draw grid
 
-        const int screenWidth = 800;
-        const int screenHeight = 800;
-
-        const int gridWidth = 200;   // Number of columns
-        const int gridHeight = 200;  // Number of rows
-        const int pixelSize = 4;   // Size of each "pixel" (square)
-
-        // Draw the grid of pixels
-        for (int y = 0; y < gridHeight; y++)  // Rows
+        for (int y = 0; y < gridHeight; y++)
         {
-            for (int x = 0; x < gridWidth; x++)  // Columns
+            for (int x = 0; x < gridWidth; x++)
             {
-                int posX = x * pixelSize; // X-coordinate of the pixel
-                int posY = y * pixelSize; // Y-coordinate of the pixel
+                Vector2 pos = Utils.GridToWorld(new Vector2(x, y));
 
-                // Example: Alternate colors for the grid
-                // Raylib.DrawText($"# of entities: {entityManager.GetSize()}", 12, 25, 20, Color.Black);
-
-                Raylib.DrawRectangleLines(posX, posY, pixelSize, pixelSize, Color.Gray);
-
-                // Raylib.DrawRectangle(posX, posY, pixelSize, pixelSize, color);
-            }
-        }
-
-        Raylib.DrawText($"FPS: {Raylib.GetFPS()}", 12, 12, 20, Color.Black);
-        Raylib.DrawText($"# of particles: {this.CountParticles()}", 12, 25, 20, Color.Black);
-
-
-        for (int i = 0; i < grid.GetLength(0); i++)
-        {
-            for (int j = 0; j < grid.GetLength(1); j++)
-            {
-                var pos = new Vector2(i * 4, j * 4);
-                if (PositionInScreenBounds(pos) && grid[i, j] != null)
-                {
-                    Raylib.DrawRectangle(
+                // Draw background grid lines
+                Raylib_cs.Raylib.DrawRectangleLines(
                     (int)pos.X,
                     (int)pos.Y,
-                    4,
-                    4,
-                    Raylib_cs.Color.Red
-                 );
+                    Variables.PixelSize,
+                    Variables.PixelSize,
+                    Raylib_cs.Color.Gray
+                );
+
+                ParticleType type = grid[y, x];
+                if (type == ParticleType.Empty) continue;
+
+                Raylib_cs.Color color = particleProperties[type].Color;
+
+                if (color.A > 0)
+                {
+                    Raylib_cs.Raylib.DrawRectangle(
+                        (int)pos.X,
+                        (int)pos.Y,
+                        Variables.PixelSize,
+                        Variables.PixelSize,
+                        color
+                    );
                 }
             }
         }
 
-        // 
+        Raylib_cs.Raylib.DrawText($"FPS: {Raylib_cs.Raylib.GetFPS()}", 12, 12, 20, Raylib_cs.Color.Black);
+        Raylib_cs.Raylib.DrawText($"# of particles: {CountParticles()}", 12, 35, 20, Raylib_cs.Color.Black);
 
-        Raylib.EndDrawing();
 
+        Raylib_cs.Raylib.EndDrawing();
     }
+
     public void AddParticle(Vector2 position)
     {
-        // FIX: dont add particles if mouse dragged outside the window when button down
-        // grid coordinates
-        int x = (int)position.X / 4;
-        int y = (int)position.Y / 4;
-        if (PositionInScreenBounds(position) && grid[x, y] == null)
-            grid[x, y] = new Cell();
+        Vector2 gridPos = Utils.WorldToGrid(position);
+
+        if (Utils.IsInGridBounds(gridPos))
+        {
+            int x = (int)gridPos.X;
+            int y = (int)gridPos.Y;
+
+            if (grid[y, x] == ParticleType.Empty)
+            {
+                grid[y, x] = ParticleType.Sand;
+            }
+        }
     }
 
     public int CountParticles()
@@ -125,9 +155,10 @@ class ParticleSim
         int count = 0;
         foreach (var cell in grid)
         {
-            if (cell != null)
+            if (cell != ParticleType.Empty)
                 count++;
         }
         return count;
     }
+
 }
