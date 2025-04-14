@@ -11,6 +11,7 @@ namespace Ation.Common
         public static int PixelSize = 4;
 
 
+        public static float BaseGravity = 2;
     }
 
 
