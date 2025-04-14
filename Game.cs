@@ -18,20 +18,21 @@ namespace Ation.Game
         private static Renderer renderer = new Renderer(entityManager, Variables.WindowWidth, Variables.WindowHeight);
         private static ParticleSystem particleSys = new ParticleSystem(entityManager);
 
-        private static EntityTypes selectedMaterial = EntityTypes.SAND;
         private static ParticleSim particleSim = new ParticleSim();
+
+        private static ParticleType selectedMaterial = ParticleType.Sand;
 
         public static void Main()
         {
 
             Raylib.InitWindow(Variables.WindowWidth, Variables.WindowHeight, "Ation");
+            Raylib.SetTargetFPS(60);
 
             while (!Raylib.WindowShouldClose())
             {
                 ProcessInput();
                 Update(Raylib.GetFrameTime());
-                // renderer.Update();
-                particleSim.Render();
+                Render();
             }
 
             Raylib.CloseWindow();
@@ -40,18 +41,18 @@ namespace Ation.Game
 
         public static void ProcessInput()
         {
+            if (Raylib.IsKeyPressed(KeyboardKey.One))
+                selectedMaterial = ParticleType.Sand;
 
-            if (Raylib.IsMouseButtonDown(Raylib_cs.MouseButton.Left))
+            if (Raylib.IsKeyPressed(KeyboardKey.Two))
+                selectedMaterial = ParticleType.Water;
+
+            if (Raylib.IsMouseButtonDown(MouseButton.Left))
             {
-                // create a sand entity/particle
-                // set RenderComponent.Possition to mousePositon
                 Vector2 mousePos = Raylib.GetMousePosition();
-
-                // entityManager.AddEntity(selectedMaterial, Raylib.GetMousePosition());
-                particleSim.AddParticle(mousePos);
-                Console.WriteLine("Mouse clicked on position: " + mousePos);
+                particleSim.AddParticle(mousePos, selectedMaterial, radius: 3);
+                Console.WriteLine($"Spawned {selectedMaterial} at: {mousePos}");
             }
-
         }
 
         public static void Update(float dt)
@@ -61,7 +62,15 @@ namespace Ation.Game
         }
         public static void Render()
         {
+            Raylib.BeginDrawing();
+            Raylib.ClearBackground(Color.LightGray);
 
+            particleSim.Render(); // Draw particles
+
+            // Draw UI (FPS, Particle count already drawn by ParticleSim, now add Material)
+            Raylib.DrawText($"Material: {selectedMaterial}", 12, 60, 20, Color.Black);
+
+            Raylib.EndDrawing();
         }
     }
 }
