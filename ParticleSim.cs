@@ -1,6 +1,8 @@
 using System.Numerics;
 using Ation.Common;
-
+using System.IO;
+using System.Text.Json;
+using Ation.Entities;
 namespace Ation.ParticleSimulation;
 
 enum ParticleType
@@ -19,7 +21,14 @@ struct Particle
     public Raylib_cs.Color Color;
     public Vector2 Velocity; // Now has velocity
 }
-
+class Area
+{
+    public string type { get; set; }
+    public int startX { get; set; }
+    public int startY { get; set; }
+    public int endX { get; set; }
+    public int endY { get; set; }
+}
 class ParticleSim
 {
     private Particle[,] grid = new Particle[
@@ -30,6 +39,60 @@ class ParticleSim
     private const float Gravity = 1.0f; // Acceleration per frame
 
     public ParticleSim() { }
+
+    public void LoadTestLevel(string path)
+    {
+        if (!File.Exists(path))
+        {
+            Console.WriteLine($"Level file not found: {path}");
+            return;
+        }
+
+        string json = File.ReadAllText(path);
+        var areas = JsonSerializer.Deserialize<List<Area>>(json);
+
+        if (areas == null)
+        {
+            Console.WriteLine("Invalid level data.");
+            return;
+        }
+
+        foreach (var area in areas)
+        {
+            ParticleType particleType = area.type.ToLower() switch
+            {
+                "solid" => ParticleType.Solid,
+                "water" => ParticleType.Water,
+                "sand" => ParticleType.Sand,
+                "steam" => ParticleType.Steam,
+                _ => ParticleType.Empty
+            };
+
+            for (int y = area.startY; y <= area.endY; y++)
+            {
+                for (int x = area.startX; x <= area.endX; x++)
+                {
+                    if (!Utils.IsInGridBounds(new Vector2(x, y)))
+                        continue;
+
+                    grid[y, x] = new Particle
+                    {
+                        Type = particleType,
+                        Color = particleType switch
+                        {
+                            ParticleType.Solid => Raylib_cs.Color.DarkGray,
+                            ParticleType.Water => Raylib_cs.Color.Blue,
+                            ParticleType.Sand => Raylib_cs.Color.Yellow,
+                            ParticleType.Steam => Raylib_cs.Color.LightGray,
+                            _ => Raylib_cs.Color.White
+                        },
+                        Velocity = Vector2.Zero
+                    };
+                }
+            }
+        }
+    }
+
 
     public void Init()
     {
@@ -47,8 +110,10 @@ class ParticleSim
         }
     }
 
-    public void Update(float dt)
+    public void Update(float dt, List<ICollider> colliders = null)
     {
+        HandleCollisions(colliders);
+
         for (int y = grid.GetLength(0) - 1; y >= 0; y--)
         {
             for (int x = grid.GetLength(1) - 1; x >= 0; x--)
@@ -67,12 +132,10 @@ class ParticleSim
                     case ParticleType.Solid:
                         break;
                 }
-
             }
         }
+
     }
-
-
 
     private void processSand(int x, int y)
     {
@@ -245,6 +308,7 @@ class ParticleSim
         }
     }
 
+
     private void processSteam(int x, int y)
     {
         if (grid[y, x].Type != ParticleType.Steam) return;
@@ -314,6 +378,39 @@ class ParticleSim
     }
 
 
+    private void HandleCollisions(List<ICollider> colliders)
+    {
+        if (colliders == null) return;
+
+        foreach (var collider in colliders)
+        {
+            Raylib_cs.Rectangle bounds = collider.GetBounds();
+            Vector2 velocity = collider.GetVelocity();
+
+            int minX = (int)(bounds.X / Variables.PixelSize);
+            int minY = (int)(bounds.Y / Variables.PixelSize);
+            int maxX = (int)((bounds.X + bounds.Width) / Variables.PixelSize);
+            int maxY = (int)((bounds.Y + bounds.Height) / Variables.PixelSize);
+
+            for (int y = minY; y <= maxY; y++)
+            {
+                for (int x = minX; x <= maxX; x++)
+                {
+                    if (!Utils.IsInGridBounds(new Vector2(x, y))) continue;
+
+                    // Example: push sand out of collider area
+                    if (grid[y, x].Type == ParticleType.Sand)
+                    {
+                        int pushY = y - 1;
+                        if (Utils.IsInGridBounds(new Vector2(x, pushY)) && grid[pushY, x].Type == ParticleType.Empty)
+                        {
+                            SwapCells(x, y, x, pushY);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
 
 
@@ -363,7 +460,8 @@ class ParticleSim
         // Raylib_cs.Raylib.EndDrawing();
     }
 
-    public void AddParticle(Vector2 position, ParticleType type, int radius = 3)
+    public void AddParticle(Vector2 position, ParticleType type, int radius = 3, Vector2? initialVelocity = null)
+
     {
         Vector2 gridPos = Utils.WorldToGrid(position);
 
@@ -423,7 +521,8 @@ class ParticleSim
                             {
                                 Type = type,
                                 Color = color,
-                                Velocity = randomVelocity
+                                Velocity = initialVelocity ?? randomVelocity
+
                             };
                         }
                     }
@@ -431,10 +530,6 @@ class ParticleSim
             }
         }
     }
-
-
-
-
 
     public bool IsOccupied(Vector2 worldPosition)
     {

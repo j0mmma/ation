@@ -1,0 +1,30 @@
+[
+    {
+        "type": "solid",
+        "startX": 20,
+        "startY": 110,
+        "endX": 230,
+        "endY": 124
+    },
+    {
+        "type": "solid",
+        "startX": 20,
+        "startY": 70,
+        "endX": 30,
+        "endY": 110
+    },
+    {
+        "type": "solid",
+        "startX": 220,
+        "startY": 70,
+        "endX": 230,
+        "endY": 110
+    },
+    {
+        "type": "solid",
+        "startX": 110,
+        "startY": 40,
+        "endX": 140,
+        "endY": 45
+    }
+]

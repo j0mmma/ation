@@ -5,17 +5,30 @@ using Ation.ParticleSimulation;
 
 namespace Ation.Entities
 {
-    class Player
+    public interface ICollider
+    {
+        public Rectangle GetBounds();         // World space
+        public Vector2 GetVelocity();         // Optional, for pushing logic
+    }
+
+
+
+    class Player : ICollider
     {
         public Vector2 Position;
         public Vector2 Velocity;
-        public Vector2 Size = new Vector2(10, 10); // 10x10 pixels player box
+        public Vector2 Size = new Vector2(30, 50); // Player hitbox size
 
         private const float Speed = 100f;      // Move speed in pixels/sec
         private const float JumpForce = -200f; // Upward jump velocity
         private const float Gravity = 500f;    // Gravity in pixels/sec^2
 
         private ParticleSim particleSim;
+        public bool WandEnabled { get; set; } = false;
+
+        private float wandLength = 20f; // pixels
+        private float wandCooldown = 0.05f;
+        private float wandTimer = 0f;
 
         public Player(ParticleSim particleSimRef)
         {
@@ -26,41 +39,97 @@ namespace Ation.Entities
 
         public void Update(float dt)
         {
+
+            // Push up if embedded in particles
+            if (IsColliding(Position))
+            {
+                const int maxPushSteps = 20;
+                for (int i = 1; i <= maxPushSteps; i++)
+                {
+                    Vector2 pushed = new Vector2(Position.X, Position.Y - i);
+                    if (!IsColliding(pushed) && Utils.IsPositionInsideWindow(pushed))
+                    {
+                        Position = pushed;
+                        Velocity.Y = 0;
+                        break;
+                    }
+                }
+            }
+
             // Apply gravity
             Velocity.Y += Gravity * dt;
 
             // Predict next position
             Vector2 nextPos = Position + Velocity * dt;
 
-            // Horizontal collision
-            Vector2 horizontalMove = new Vector2(nextPos.X, Position.Y);
-            if (!IsColliding(horizontalMove) && Utils.IsInGridBounds(horizontalMove))
-                Position.X = horizontalMove.X;
-            else
+            // Horizontal movement with step-up logic
+            bool movedHorizontally = false;
+            for (int step = 0; step <= Variables.PixelSize * 2; step += Variables.PixelSize)
+            {
+                Vector2 attemptPos = new Vector2(nextPos.X, Position.Y - step);
+                if (!IsColliding(attemptPos) && Utils.IsPositionInsideWindow(attemptPos))
+                {
+                    Position.X = attemptPos.X;
+                    Position.Y = attemptPos.Y;
+                    movedHorizontally = true;
+                    break;
+                }
+            }
+            if (!movedHorizontally)
                 Velocity.X = 0;
 
-            // Vertical collision
+            // Vertical movement
             Vector2 verticalMove = new Vector2(Position.X, nextPos.Y);
-            if (!IsColliding(verticalMove) && Utils.IsInGridBounds(verticalMove))
+            if (!IsColliding(verticalMove) && Utils.IsPositionInsideWindow(verticalMove))
                 Position.Y = verticalMove.Y;
             else
                 Velocity.Y = 0;
 
-            // Final clamping to make absolutely sure player is inside window
+            // Clamp to screen
             Position.X = Math.Clamp(Position.X, 0, Variables.WindowWidth - Size.X);
             Position.Y = Math.Clamp(Position.Y, 0, Variables.WindowHeight - Size.Y);
+
+            if (WandEnabled && Raylib.IsMouseButtonDown(MouseButton.Left))
+                UpdateWand(dt);
         }
 
 
-        public void MoveLeft()
+        private void UpdateWand(float dt)
         {
-            Velocity.X = -Speed;
+            wandTimer -= dt;
+
+            if (Raylib.IsMouseButtonDown(MouseButton.Left) && wandTimer <= 0)
+            {
+                float intensity = 500f; // pixels per second, adjust to control stream power
+
+                Vector2 playerCenter = Position + Size / 2f;
+                Vector2 mouse = Raylib.GetMousePosition();
+                Vector2 direction = Vector2.Normalize(mouse - playerCenter);
+                Vector2 tip = playerCenter + direction * wandLength;
+
+                Vector2 velocity = direction * intensity;
+
+                particleSim.AddParticle(tip, ParticleType.Water, radius: 1, initialVelocity: velocity);
+                wandTimer = wandCooldown;
+            }
         }
 
-        public void MoveRight()
+
+        private Vector2 GetWandTip()
         {
-            Velocity.X = Speed;
+            Vector2 playerCenter = Position + Size / 2f;
+            Vector2 mouse = Raylib.GetMousePosition();
+            Vector2 direction = Vector2.Normalize(mouse - playerCenter);
+
+            return playerCenter + direction * wandLength;
         }
+
+
+
+
+        public void MoveLeft() => Velocity.X = -Speed;
+        public void MoveRight() => Velocity.X = Speed;
+        public void StopHorizontal() => Velocity.X = 0;
 
         public void Jump()
         {
@@ -68,30 +137,49 @@ namespace Ation.Entities
                 Velocity.Y = JumpForce;
         }
 
-        public void StopHorizontal()
-        {
-            Velocity.X = 0;
-        }
-
         public bool IsOnGround()
         {
-            Vector2 feet = new Vector2(Position.X, Position.Y + Size.Y + 1);
-            return particleSim.IsOccupied(feet);
+            int steps = (int)(Size.X / Variables.PixelSize);
+            int tolerance = Variables.PixelSize;
+
+            for (int i = 0; i <= steps; i++)
+            {
+                float x = Position.X + i * Variables.PixelSize;
+
+                for (int offset = 1; offset <= tolerance; offset++)
+                {
+                    Vector2 check = new Vector2(x, Position.Y + Size.Y + offset);
+                    if (particleSim.IsOccupied(check))
+                        return true;
+                }
+            }
+
+            return false;
         }
+
 
         private bool IsColliding(Vector2 checkPos)
         {
-            // Check 4 corners of the player's box
-            Vector2 topLeft = checkPos;
-            Vector2 topRight = checkPos + new Vector2(Size.X, 0);
-            Vector2 bottomLeft = checkPos + new Vector2(0, Size.Y);
-            Vector2 bottomRight = checkPos + Size;
+            int stepsX = (int)(Size.X / Variables.PixelSize);
+            int stepsY = (int)(Size.Y / Variables.PixelSize);
 
-            return particleSim.IsOccupied(topLeft) ||
-                   particleSim.IsOccupied(topRight) ||
-                   particleSim.IsOccupied(bottomLeft) ||
-                   particleSim.IsOccupied(bottomRight);
+            for (int x = 0; x <= stepsX; x++)
+            {
+                for (int y = 0; y <= stepsY; y++)
+                {
+                    Vector2 p = new Vector2(
+                        checkPos.X + x * Variables.PixelSize,
+                        checkPos.Y + y * Variables.PixelSize
+                    );
+
+                    if (particleSim.IsOccupied(p))
+                        return true;
+                }
+            }
+
+            return false;
         }
+
 
         public void Render()
         {
@@ -102,6 +190,39 @@ namespace Ation.Entities
                 (int)Size.Y,
                 Color.Red
             );
+
+            Raylib.DrawRectangleLines(
+                (int)Position.X,
+                (int)Position.Y,
+                (int)Size.X,
+                (int)Size.Y,
+                Color.Black
+            );
+
+            // Draw wand
+            Vector2 center = Position + Size / 2f;
+            Vector2 tip = GetWandTip();
+            Raylib.DrawLineEx(center, tip, 2f, Color.DarkBlue);
         }
+
+
+        public Rectangle GetBounds()
+        {
+            // Shrink the top slightly to avoid displacing particles when gliding
+            float yOffset = Variables.PixelSize * 0.5f;
+
+            return new Rectangle(
+                Position.X,
+                Position.Y + yOffset,
+                Size.X,
+                Size.Y - yOffset
+            );
+        }
+
+        public Vector2 GetVelocity()
+        {
+            return Velocity;
+        }
+
     }
 }
