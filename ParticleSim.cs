@@ -19,7 +19,9 @@ struct Particle
 {
     public ParticleType Type;
     public Raylib_cs.Color Color;
-    public Vector2 Velocity; // Now has velocity
+    public Vector2 Velocity;
+    public Vector2 NetForce;
+    public float Mass;
 }
 class Area
 {
@@ -36,8 +38,13 @@ class ParticleSim
         (int)Variables.WindowWidth / Variables.PixelSize
     ];
 
-    private const float Gravity = 1.0f; // Acceleration per frame
+    private const float Gravity = 10.0f; // Acceleration per frame
+    private readonly Vector2 BaseWind = new Vector2(20f, 0); // adjust as needed
+    private const int MaxWindDepth = 6; // deeper than this → no wind effect
 
+
+    private Vector2 previousMousePos = Vector2.Zero;
+    private Vector2 mouseVelocity = Vector2.Zero;
     public ParticleSim() { }
 
     public void LoadTestLevel(string path)
@@ -65,7 +72,7 @@ class ParticleSim
                 "water" => ParticleType.Water,
                 "sand" => ParticleType.Sand,
                 "steam" => ParticleType.Steam,
-                _ => ParticleType.Empty
+                _ => ParticleType.Empty,
             };
 
             for (int y = area.startY; y <= area.endY; y++)
@@ -86,12 +93,15 @@ class ParticleSim
                             ParticleType.Steam => Raylib_cs.Color.LightGray,
                             _ => Raylib_cs.Color.White
                         },
-                        Velocity = Vector2.Zero
+                        Velocity = Vector2.Zero,
+                        NetForce = Vector2.Zero,
+                        Mass = 1.0f
                     };
                 }
             }
         }
     }
+
 
 
     public void Init()
@@ -104,15 +114,44 @@ class ParticleSim
                 {
                     Type = ParticleType.Empty,
                     Color = new Raylib_cs.Color(0, 0, 0, 0),
-                    Velocity = Vector2.Zero
+                    Velocity = Vector2.Zero,
+                    NetForce = Vector2.Zero,
+                    Mass = 1.0f,
                 };
             }
         }
+
+        // Load level after clearing the grid
+        //LoadTestLevel("levels/test.json"); // <- replace with actual path or make it a param
     }
+
+    private void UpdateMouseVelocity(float dt)
+    {
+        Vector2 currentMouse = new Vector2(Raylib_cs.Raylib.GetMouseX(), Raylib_cs.Raylib.GetMouseY());
+        mouseVelocity = (currentMouse - previousMousePos) / dt;
+        previousMousePos = currentMouse;
+    }
+
 
     public void Update(float dt, List<ICollider> colliders = null)
     {
         HandleCollisions(colliders);
+
+        for (int y = 0; y < grid.GetLength(0); y++)
+        {
+            for (int x = 0; x < grid.GetLength(1); x++)
+            {
+                switch (grid[y, x].Type)
+                {
+                    case ParticleType.Sand:
+                    case ParticleType.Water:
+                        ApplyForce(x, y, new Vector2(0, Gravity)); // Apply gravity to both
+                        break;
+                }
+            }
+        }
+
+        IntegrateForces(dt);
 
         for (int y = grid.GetLength(0) - 1; y >= 0; y--)
         {
@@ -129,165 +168,119 @@ class ParticleSim
                     case ParticleType.Steam:
                         processSteam(x, y);
                         break;
-                    case ParticleType.Solid:
-                        break;
                 }
             }
         }
-
     }
+
+
+
+
+
 
     private void processSand(int x, int y)
     {
-        if (grid[y, x].Type != ParticleType.Sand) return;
+        ref Particle p = ref grid[y, x];
+        if (p.Type != ParticleType.Sand) return;
 
-        // Apply gravity
-        grid[y, x].Velocity.Y += Gravity;
+        int moveX = (int)MathF.Round(p.Velocity.X);
+        int moveY = (int)MathF.Round(p.Velocity.Y);
 
-        int moveX = (int)MathF.Round(grid[y, x].Velocity.X);
-        int moveY = (int)MathF.Round(grid[y, x].Velocity.Y);
+        // Horizontal drift
+        if (moveX != 0)
+        {
+            int targetX = x + Math.Sign(moveX);
+            if (targetX >= 0 && targetX < grid.GetLength(1) &&
+                grid[y, targetX].Type == ParticleType.Empty)
+            {
+                SwapCells(x, y, targetX, y);
+                x = targetX;
+            }
+        }
 
+        // Vertical fall
         for (int step = 0; step < Math.Abs(moveY); step++)
         {
-            if (y + 1 >= grid.GetLength(0)) return;
+            int targetY = y + Math.Sign(moveY);
+            if (targetY < 0 || targetY >= grid.GetLength(0)) return;
 
-            Particle below = grid[y + 1, x];
+            ParticleType belowType = grid[targetY, x].Type;
 
-            if (below.Type == ParticleType.Empty)
+            if (belowType == ParticleType.Empty || belowType == ParticleType.Water)
             {
-                SwapCells(x, y, x, y + 1);
-                y += 1;
-            }
-            else if (below.Type == ParticleType.Water)
-            {
-                // Try to push water sideways first
-                bool canPushLeft = (x > 0 && grid[y + 1, x - 1].Type == ParticleType.Empty);
-                bool canPushRight = (x < grid.GetLength(1) - 1 && grid[y + 1, x + 1].Type == ParticleType.Empty);
-
-                if (canPushLeft && canPushRight)
-                {
-                    if (Raylib_cs.Raylib.GetRandomValue(0, 1) == 0)
-                    {
-                        SwapCells(x, y + 1, x - 1, y + 1); // push water left
-                        SwapCells(x, y, x, y + 1);          // fall into water spot
-                        x -= 1;
-                        y += 1;
-                    }
-                    else
-                    {
-                        SwapCells(x, y + 1, x + 1, y + 1); // push water right
-                        SwapCells(x, y, x, y + 1);
-                        x += 1;
-                        y += 1;
-                    }
-                }
-                else if (canPushLeft)
-                {
-                    SwapCells(x, y + 1, x - 1, y + 1);
-                    SwapCells(x, y, x, y + 1);
-                    x -= 1;
-                    y += 1;
-                }
-                else if (canPushRight)
-                {
-                    SwapCells(x, y + 1, x + 1, y + 1);
-                    SwapCells(x, y, x, y + 1);
-                    x += 1;
-                    y += 1;
-                }
-                else
-                {
-                    // Fully blocked → only now swap vertically
-                    SwapCells(x, y, x, y + 1);
-                    y += 1;
-                }
+                SwapCells(x, y, x, targetY);
+                y = targetY;
             }
             else
             {
-                bool canMoveLeft = (x > 0 && (grid[y + 1, x - 1].Type == ParticleType.Empty || grid[y + 1, x - 1].Type == ParticleType.Water));
-                bool canMoveRight = (x < grid.GetLength(1) - 1 && (grid[y + 1, x + 1].Type == ParticleType.Empty || grid[y + 1, x + 1].Type == ParticleType.Water));
+                // Diagonal fallback if blocked
+                bool canLeft = x > 0 && grid[y + 1, x - 1].Type is ParticleType.Empty or ParticleType.Water;
+                bool canRight = x < grid.GetLength(1) - 1 && grid[y + 1, x + 1].Type is ParticleType.Empty or ParticleType.Water;
 
-                if (canMoveLeft && canMoveRight)
+                if (canLeft && canRight)
                 {
                     if (Raylib_cs.Raylib.GetRandomValue(0, 1) == 0)
-                    {
                         SwapCells(x, y, x - 1, y + 1);
-                        x -= 1;
-                        y += 1;
-                    }
                     else
-                    {
                         SwapCells(x, y, x + 1, y + 1);
-                        x += 1;
-                        y += 1;
-                    }
                 }
-                else if (canMoveLeft)
-                {
+                else if (canLeft)
                     SwapCells(x, y, x - 1, y + 1);
-                    x -= 1;
-                    y += 1;
-                }
-                else if (canMoveRight)
-                {
+                else if (canRight)
                     SwapCells(x, y, x + 1, y + 1);
-                    x += 1;
-                    y += 1;
-                }
                 else
                 {
-                    // Full collision → reduce vertical velocity
-                    grid[y, x].Velocity.Y *= 0.5f;
+                    p.Velocity *= 0.5f;
                     break;
                 }
+
+                return;
             }
         }
     }
 
+
+
+
+
+
     private void processWater(int x, int y)
     {
-        if (grid[y, x].Type != ParticleType.Water) return;
+        ref Particle p = ref grid[y, x];
+        if (p.Type != ParticleType.Water) return;
 
-        float horizontalDamping = 0.85f; // Dampen sideways movement slowly
-        float maxHorizontalSpeed = 2.5f; // Cap max speed sideways
+        float horizontalDamping = 0.85f;
+        float maxHorizontalSpeed = 5.5f;
 
-        grid[y, x].Velocity.Y += Gravity;
+        // Apply gravity as force
 
-        // Dampen horizontal velocity each frame
-        grid[y, x].Velocity.X *= horizontalDamping;
+        // Dampen and clamp horizontal velocity (simulate water resistance)
+        p.Velocity.X *= horizontalDamping;
+        p.Velocity.X = Math.Clamp(p.Velocity.X, -maxHorizontalSpeed, maxHorizontalSpeed);
 
-        // Clamp horizontal speed to avoid crazy drifting
-        grid[y, x].Velocity.X = Math.Clamp(grid[y, x].Velocity.X, -maxHorizontalSpeed, maxHorizontalSpeed);
-
-        int moveX = (int)MathF.Round(grid[y, x].Velocity.X);
-        int moveY = (int)MathF.Round(grid[y, x].Velocity.Y);
+        int moveX = (int)MathF.Round(p.Velocity.X);
+        int moveY = (int)MathF.Round(p.Velocity.Y);
 
         for (int step = 0; step < Math.Abs(moveY); step++)
         {
-            if (y + 1 >= grid.GetLength(0)) return;
+            int targetY = y + 1;
+            if (targetY >= grid.GetLength(0)) return;
 
-            if (grid[y + 1, x].Type == ParticleType.Empty)
+            if (grid[targetY, x].Type == ParticleType.Empty)
             {
-                SwapCells(x, y, x, y + 1);
-                y += 1;
+                SwapCells(x, y, x, targetY);
+                y = targetY;
             }
             else
             {
-                bool canMoveLeft = (x > 0 && grid[y, x - 1].Type == ParticleType.Empty);
-                bool canMoveRight = (x < grid.GetLength(1) - 1 && grid[y, x + 1].Type == ParticleType.Empty);
+                bool canMoveLeft = x > 0 && grid[y, x - 1].Type == ParticleType.Empty;
+                bool canMoveRight = x < grid.GetLength(1) - 1 && grid[y, x + 1].Type == ParticleType.Empty;
 
                 if (canMoveLeft && canMoveRight)
                 {
-                    if (Raylib_cs.Raylib.GetRandomValue(0, 1) == 0)
-                    {
-                        SwapCells(x, y, x - 1, y);
-                        x -= 1;
-                    }
-                    else
-                    {
-                        SwapCells(x, y, x + 1, y);
-                        x += 1;
-                    }
+                    int dir = Raylib_cs.Raylib.GetRandomValue(0, 1) == 0 ? -1 : 1;
+                    SwapCells(x, y, x + dir, y);
+                    x += dir;
                 }
                 else if (canMoveLeft)
                 {
@@ -301,12 +294,18 @@ class ParticleSim
                 }
                 else
                 {
-                    grid[y, x].Velocity = Vector2.Zero;
+                    p.Velocity = Vector2.Zero;
                     break;
                 }
             }
         }
     }
+
+
+
+
+
+
 
 
     private void processSteam(int x, int y)
@@ -412,16 +411,14 @@ class ParticleSim
         }
     }
 
-
-
-
-
     private void SwapCells(int origX, int origY, int x, int y)
     {
         Particle temp = grid[y, x];
         grid[y, x] = grid[origY, origX];
         grid[origY, origX] = temp;
     }
+
+
 
     public void Render()
     {
@@ -460,11 +457,9 @@ class ParticleSim
         // Raylib_cs.Raylib.EndDrawing();
     }
 
-    public void AddParticle(Vector2 position, ParticleType type, int radius = 3, Vector2? initialVelocity = null)
-
+    public void AddParticle(Vector2 position, ParticleType type, int radius = 3)
     {
         Vector2 gridPos = Utils.WorldToGrid(position);
-
         int centerX = (int)gridPos.X;
         int centerY = (int)gridPos.Y;
 
@@ -475,61 +470,49 @@ class ParticleSim
                 int spawnX = centerX + x;
                 int spawnY = centerY + y;
 
-                if (x * x + y * y > radius * radius) continue; // circular brush
+                if (x * x + y * y > radius * radius) continue;
+                if (!Utils.IsInGridBounds(new Vector2(spawnX, spawnY))) continue;
 
-                if (Utils.IsInGridBounds(new Vector2(spawnX, spawnY)))
+                if (type == ParticleType.Eraser)
                 {
-                    if (type == ParticleType.Eraser)
+                    grid[spawnY, spawnX] = new Particle
                     {
-                        // Clear any non-empty particle
-                        if (grid[spawnY, spawnX].Type != ParticleType.Empty)
-                        {
-                            grid[spawnY, spawnX] = new Particle
-                            {
-                                Type = ParticleType.Empty,
-                                Color = new Raylib_cs.Color(0, 0, 0, 0),
-                                Velocity = Vector2.Zero
-                            };
-                        }
-                    }
-                    else
+                        Type = ParticleType.Empty,
+                        Color = new Raylib_cs.Color(0, 0, 0, 0),
+                        Velocity = Vector2.Zero,
+                        NetForce = Vector2.Zero,
+                        Mass = 1.0f,
+                    };
+                }
+                else if (grid[spawnY, spawnX].Type == ParticleType.Empty)
+                {
+                    Raylib_cs.Color color = type switch
                     {
-                        // Only spawn new particle if cell is empty
-                        if (grid[spawnY, spawnX].Type == ParticleType.Empty)
-                        {
-                            Raylib_cs.Color color = type switch
-                            {
-                                ParticleType.Sand => Raylib_cs.Color.Yellow,
-                                ParticleType.Water => Raylib_cs.Color.Blue,
-                                ParticleType.Solid => Raylib_cs.Color.DarkGray,
-                                ParticleType.Steam => Raylib_cs.Color.Gray,
-                                _ => new Raylib_cs.Color(255, 255, 255, 255)
-                            };
+                        ParticleType.Sand => Raylib_cs.Color.Yellow,
+                        ParticleType.Water => Raylib_cs.Color.Blue,
+                        ParticleType.Solid => Raylib_cs.Color.DarkGray,
+                        ParticleType.Steam => Raylib_cs.Color.Gray,
+                        _ => new Raylib_cs.Color(255, 255, 255, 255)
+                    };
 
-                            Vector2 randomVelocity = type switch
-                            {
-                                ParticleType.Water => new Vector2(Raylib_cs.Raylib.GetRandomValue(-10, 10) / 5.0f, 0),
-                                ParticleType.Sand => new Vector2(Raylib_cs.Raylib.GetRandomValue(-1, 1), 0),
-                                ParticleType.Steam => new Vector2(
-                                    Raylib_cs.Raylib.GetRandomValue(-30, 30) / 10.0f,
-                                    Raylib_cs.Raylib.GetRandomValue(-5, -1) / 10.0f
-                                ),
-                                _ => Vector2.Zero
-                            };
+                    Vector2 worldPos = Utils.GridToWorld(new Vector2(spawnX, spawnY)); // initial sub-pixel pos
 
-                            grid[spawnY, spawnX] = new Particle
-                            {
-                                Type = type,
-                                Color = color,
-                                Velocity = initialVelocity ?? randomVelocity
-
-                            };
-                        }
-                    }
+                    grid[spawnY, spawnX] = new Particle
+                    {
+                        Type = type,
+                        Color = color,
+                        Velocity = Vector2.Zero,
+                        NetForce = Vector2.Zero,
+                        Mass = 1.0f,
+                    };
                 }
             }
         }
     }
+
+
+
+
 
     public bool IsOccupied(Vector2 worldPosition)
     {
@@ -554,4 +537,36 @@ class ParticleSim
         }
         return count;
     }
+
+    private void ApplyForce(int x, int y, Vector2 force)
+    {
+        if (!Utils.IsInGridBounds(new Vector2(x, y))) return;
+
+        ref Particle p = ref grid[y, x];
+        if (p.Type == ParticleType.Empty) return;
+
+        p.NetForce += force;
+    }
+
+    private void IntegrateForces(float dt)
+    {
+        for (int y = 0; y < grid.GetLength(0); y++)
+        {
+            for (int x = 0; x < grid.GetLength(1); x++)
+            {
+                ref Particle p = ref grid[y, x];
+                if (p.Type != ParticleType.Sand && p.Type != ParticleType.Water) continue;
+
+                Vector2 acceleration = p.NetForce / p.Mass;
+                p.Velocity += acceleration * dt;
+
+                p.NetForce = Vector2.Zero;
+            }
+        }
+    }
+
+
+
+
+
 }

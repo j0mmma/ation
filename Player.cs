@@ -109,7 +109,7 @@ namespace Ation.Entities
 
                 Vector2 velocity = direction * intensity;
 
-                particleSim.AddParticle(tip, ParticleType.Water, radius: 1, initialVelocity: velocity);
+                //particleSim.AddParticle(tip, ParticleType.Water, radius: 1, initialVelocity: velocity);
                 wandTimer = wandCooldown;
             }
         }
