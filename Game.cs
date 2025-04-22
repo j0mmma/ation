@@ -3,7 +3,7 @@ using Raylib_cs;
 
 using Ation.Systems;
 using Ation.Entities;
-using Ation.ParticleSimulation;
+using Ation.Simulation;
 using Ation.Common;
 
 namespace Ation.Game
@@ -13,9 +13,6 @@ namespace Ation.Game
         private const int WINDOW_W = 500;
         private const int WINDOW_H = 500;
 
-        private static EntityManager entityManager = new EntityManager();
-        private static Renderer renderer = new Renderer(entityManager, Variables.WindowWidth, Variables.WindowHeight);
-        private static ParticleSystem particleSys = new ParticleSystem(entityManager);
         private static ParticleSim particleSim = new ParticleSim();
         private enum Tool
         {
@@ -24,8 +21,15 @@ namespace Ation.Game
         }
 
         private static Tool selectedTool = Tool.Material;
-
-        private static ParticleType selectedMaterial = ParticleType.Sand;
+        //private static Func<Simulation.Material>? selectedMaterialFactory = () => new Sand();
+        private static readonly Dictionary<KeyboardKey, Func<Simulation.Material>?> materialBindings = new()
+        // {
+        //     { KeyboardKey.One, () => new Sand() },
+        //     { KeyboardKey.Two, () => new Water() },
+        //    // { KeyboardKey.Three, () => new Solid() },
+        //     { KeyboardKey.Four, () => new Steam() },
+        //     { KeyboardKey.Five, () => null }, // Eraser
+        // };
         private static Player player = new Player(particleSim);
 
         private static Vector2 previousMousePos = Vector2.Zero;
@@ -40,7 +44,7 @@ namespace Ation.Game
             Raylib.InitWindow(Variables.WindowWidth, Variables.WindowHeight, "Ation");
             Raylib.SetTargetFPS(60);
 
-            particleSim.LoadTestLevel("test_level.json");
+            //particleSim.LoadTestLevel("test_level.json");
 
 
             while (!Raylib.WindowShouldClose())
@@ -67,35 +71,16 @@ namespace Ation.Game
             if (Raylib.IsKeyPressed(KeyboardKey.Zero) || Raylib.IsKeyPressed(KeyboardKey.Kp0))
                 selectedTool = Tool.Wand;
 
-            if (Raylib.IsKeyPressed(KeyboardKey.One))
+            foreach (var (key, factory) in materialBindings)
             {
-                selectedTool = Tool.Material;
-                selectedMaterial = ParticleType.Sand;
+                if (Raylib.IsKeyPressed(key))
+                {
+                    selectedTool = Tool.Material;
+                    selectedMaterialFactory = factory;
+                    break;
+                }
             }
 
-            if (Raylib.IsKeyPressed(KeyboardKey.Two))
-            {
-                selectedTool = Tool.Material;
-                selectedMaterial = ParticleType.Water;
-            }
-
-            if (Raylib.IsKeyPressed(KeyboardKey.Three))
-            {
-                selectedTool = Tool.Material;
-                selectedMaterial = ParticleType.Solid;
-            }
-
-            if (Raylib.IsKeyPressed(KeyboardKey.Four))
-            {
-                selectedTool = Tool.Material;
-                selectedMaterial = ParticleType.Steam;
-            }
-
-            if (Raylib.IsKeyPressed(KeyboardKey.Five))
-            {
-                selectedTool = Tool.Material;
-                selectedMaterial = ParticleType.Eraser;
-            }
 
             // Adjust brush size
             float scroll = Raylib.GetMouseWheelMove();
@@ -123,7 +108,17 @@ namespace Ation.Game
                 {
                     float t = (float)i / steps;
                     Vector2 interpolatedPos = Vector2.Lerp(previousMousePos, mousePos, t);
-                    particleSim.AddParticle(interpolatedPos, selectedMaterial, radius: brushRadius);
+                    if (selectedMaterialFactory == null)
+                    {
+                        // Eraser
+                        particleSim.ClearParticles(interpolatedPos, brushRadius);
+                    }
+                    else
+                    {
+                        particleSim.AddParticle(interpolatedPos, selectedMaterialFactory(), radius: brushRadius);
+                    }
+
+
                 }
             }
 
@@ -133,11 +128,10 @@ namespace Ation.Game
 
         public static void Update(float dt)
         {
-            //particleSys.Update(dt);
             player.WandEnabled = (selectedTool == Tool.Wand);
 
             List<ICollider> colliders = new() { player };
-            player.Update(dt);
+            //player.Update(dt);
             particleSim.Update(dt);
         }
 
@@ -149,12 +143,16 @@ namespace Ation.Game
             particleSim.Render();
             player.Render(); // draw player on top
 
-            Raylib.DrawText($"Material: {selectedMaterial}", 12, 60, 20, Color.Black);
+            string label = selectedMaterialFactory?.Invoke()?.DisplayName ?? "Null";
+            Raylib.DrawText($"Material: {label}", 12, 60, 20, Color.Black);
+
             Raylib.DrawText($"Brush Size: {brushRadius}", 12, 85, 20, Color.Black);
 
             // Draw brush outline
             Vector2 mousePos = Raylib.GetMousePosition();
             Raylib.DrawCircleLines((int)mousePos.X, (int)mousePos.Y, brushRadius * Variables.PixelSize, Color.Red);
+            Raylib.DrawText($"FPS: {Raylib.GetFPS()}", 12, 12, 20, Color.Black);
+            Raylib.DrawText($"Particles: {particleSim.CountParticles()}", 12, 35, 20, Color.Black);
 
             Raylib.EndDrawing();
         }
