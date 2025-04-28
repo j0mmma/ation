@@ -87,5 +87,44 @@ namespace Ation.Simulation
 
         public (int Width, int Height) Size => (width, height);
 
+
+        public void ClearFlags()
+        {
+            for (int y = 0; y < Size.Height; y++)
+            {
+                for (int x = 0; x < Size.Width; x++)
+                {
+                    var m = Get(x, y);
+                    if (m != null)
+                        m.UpdatedThisFrame = false;
+                }
+            }
+        }
+        public void ResetFlags()
+        {
+            for (int y = 0; y < Size.Height; y++)
+            {
+                for (int x = 0; x < Size.Width; x++)
+                {
+                    var m = Get(x, y);
+                    if (m != null)
+                        m.UpdatedThisFrame = false;
+                }
+            }
+        }
+
+
+        public void DecayInactiveFlags()
+        {
+            for (int y = 0; y < Size.Height; y++)
+            {
+                for (int x = 0; x < Size.Width; x++)
+                {
+                    var m = Get(x, y);
+                    if (m != null && !m.UpdatedThisFrame)
+                        m.IsActive = false;
+                }
+            }
+        }
     }
 }

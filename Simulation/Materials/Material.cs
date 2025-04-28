@@ -16,6 +16,8 @@ namespace Ation.Simulation
         public float Mass = 1.0f;
         public Color Color;
         public abstract string DisplayName { get; }
+        public bool UpdatedThisFrame = false;
+        public bool IsActive = false;
 
         public virtual void ApplyForce(Vector2 force) => NetForce += force;
 
@@ -34,7 +36,7 @@ namespace Ation.Simulation
 
         public abstract void Step(SimulationGrid grid);
 
-        public virtual bool ActOnNeighbor(Material neighbor, SimulationGrid grid) => false;
+        public virtual bool ActOnNeighbor(Material neighbor, int targetX, int targetY, SimulationGrid grid) => false;
     }
 
     public enum MaterialClass
@@ -51,8 +53,8 @@ namespace Ation.Simulation
     {
         Sand,
         Water,
-        Steam,
-        Solid,
+        Smoke,
+        Wall,
         Eraser,
         Empty
     }
@@ -62,8 +64,10 @@ namespace Ation.Simulation
         private static readonly Dictionary<MaterialType, Func<Vector2, Material>> constructors = new()
         {
             { MaterialType.Sand, pos => new Sand(pos) },
-            // { MaterialType.Water, pos => new Water(pos) },
-            // { MaterialType.Steam, pos => new Steam(pos) },
+            { MaterialType.Water, pos => new Water(pos) },
+            { MaterialType.Wall, pos => new Wall(pos) },
+            { MaterialType.Smoke, pos => new Smoke(pos) },
+            { MaterialType.Eraser, pos => new Eraser(pos) },
         };
 
         public static Material Create(MaterialType type, Vector2 worldPos)
@@ -79,8 +83,8 @@ namespace Ation.Simulation
         {
             MaterialType.Sand => MaterialClass.MovableSolid,
             MaterialType.Water => MaterialClass.Liquid,
-            MaterialType.Steam => MaterialClass.Gas,
-            MaterialType.Solid => MaterialClass.ImmovableSolid,
+            MaterialType.Smoke => MaterialClass.Gas,
+            MaterialType.Wall => MaterialClass.ImmovableSolid,
             MaterialType.Eraser => MaterialClass.Eraser,
             MaterialType.Empty => MaterialClass.Empty,
             _ => throw new ArgumentOutOfRangeException(nameof(type))

@@ -7,7 +7,8 @@ namespace Ation.Simulation
     class FallingSandSim
     {
         private readonly SimulationGrid grid;
-        private const float Gravity = 1000f;
+        public static Vector2 Gravity = new Vector2(0, 2000f);
+        private int frameCounter = 0;
 
         public FallingSandSim(int width, int height)
         {
@@ -16,26 +17,32 @@ namespace Ation.Simulation
 
         public void Update(float dt)
         {
-            for (int y = 0; y < grid.Size.Height; y++)
-            {
-                for (int x = 0; x < grid.Size.Width; x++)
-                {
-                    var m = grid.Get(x, y);
-                    if (m == null) continue;
+            grid.ResetFlags(); // Reset UpdatedThisFrame = false for all
 
-                    m.ApplyForce(new Vector2(0, Gravity));
-                    m.Integrate(dt);
-                }
-            }
+            frameCounter++;
+            bool flipX = frameCounter % 2 == 0; // Flip X scan every frame
 
             for (int y = grid.Size.Height - 1; y >= 0; y--)
             {
-                for (int x = 0; x < grid.Size.Width; x++)
+                if (flipX)
                 {
-                    var m = grid.Get(x, y);
-                    if (m == null) continue;
+                    for (int x = grid.Size.Width - 1; x >= 0; x--)
+                    {
+                        var m = grid.Get(x, y);
+                        if (m == null || m.UpdatedThisFrame) continue;
 
-                    m.Step(grid);
+                        m.Step(grid);
+                    }
+                }
+                else
+                {
+                    for (int x = 0; x < grid.Size.Width; x++)
+                    {
+                        var m = grid.Get(x, y);
+                        if (m == null || m.UpdatedThisFrame) continue;
+
+                        m.Step(grid);
+                    }
                 }
             }
         }
@@ -99,4 +106,6 @@ namespace Ation.Simulation
 
         public int CountMaterials() => grid.Count();
     }
+
+    // TODO: implement chunks here
 }

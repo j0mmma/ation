@@ -7,7 +7,7 @@ namespace Ation.Simulation
     public abstract class MovableSolid : Material
     {
         protected float friction = 0.9f;
-        protected float speedClamp = 100f;
+        protected float speedClamp = 200f;
 
         public MovableSolid(Vector2 worldPos) : base(worldPos) { }
 
@@ -15,10 +15,10 @@ namespace Ation.Simulation
         {
             float dt = Raylib.GetFrameTime();
 
-            // Apply gravity
-            ApplyForce(new Vector2(0, 1000f));
+            UpdatedThisFrame = true;
+            IsActive = false;
 
-            // Integrate motion
+            ApplyForce(FallingSandSim.Gravity);
             Integrate(dt);
             movementRemainder += Velocity * dt;
 
@@ -30,7 +30,6 @@ namespace Ation.Simulation
             int x = (int)gridPos.X;
             int y = (int)gridPos.Y;
 
-            // Vertical movement
             for (int i = 0; i < Math.Abs(moveY); i++)
             {
                 int targetY = y + Math.Sign(moveY);
@@ -41,25 +40,45 @@ namespace Ation.Simulation
                     grid.Swap(x, y, x, targetY);
                     y = targetY;
                     gridPos = new Vector2(x, y);
+                    IsActive = true;
                     continue;
                 }
 
-                // Try sliding diagonally
+                var neighbor = grid.Get(x, targetY);
+                if (neighbor != null && ActOnNeighbor(neighbor, x, targetY, grid))
+                {
+                    // Neighbor handled (pushed or swapped), so move ourselves down
+                    y = targetY;
+                    gridPos = new Vector2(x, y);
+                    IsActive = true;
+                    continue;
+                }
+
+                // Try sliding diagonally into empty or liquid
                 bool slid = false;
-                if (grid.IsEmpty(x - 1, y + 1))
+
+                var leftDown = grid.Get(x - 1, y + 1);
+                if (grid.IsValidCell(x - 1, y + 1) && (grid.IsEmpty(x - 1, y + 1) || leftDown is Liquid))
                 {
                     grid.Swap(x, y, x - 1, y + 1);
-                    x -= 1; y += 1; slid = true;
+                    x -= 1; y += 1;
+                    slid = true;
                 }
-                else if (grid.IsEmpty(x + 1, y + 1))
+                else
                 {
-                    grid.Swap(x, y, x + 1, y + 1);
-                    x += 1; y += 1; slid = true;
+                    var rightDown = grid.Get(x + 1, y + 1);
+                    if (grid.IsValidCell(x + 1, y + 1) && (grid.IsEmpty(x + 1, y + 1) || rightDown is Liquid))
+                    {
+                        grid.Swap(x, y, x + 1, y + 1);
+                        x += 1; y += 1;
+                        slid = true;
+                    }
                 }
 
                 if (slid)
                 {
                     gridPos = new Vector2(x, y);
+                    IsActive = true;
                     continue;
                 }
 
@@ -67,11 +86,52 @@ namespace Ation.Simulation
                 break;
             }
 
-            // Clamp velocity
             Velocity = Vector2.Clamp(Velocity, new Vector2(-speedClamp, -speedClamp), new Vector2(speedClamp, speedClamp));
-
-            // Update worldPos for consistency
             worldPos = Utils.GridToWorld(gridPos);
         }
+
+        public override bool ActOnNeighbor(Material neighbor, int targetX, int targetY, SimulationGrid grid)
+        {
+            if (neighbor == null)
+                return false;
+
+            if (neighbor is Liquid)
+            {
+                // Try to push the liquid first
+                (int dx, int dy)[] pushes = {
+            (0, 1),   // Down
+            (-1, 0),  // Left
+            (1, 0),   // Right
+            (0, -1)   // Up
+        };
+
+                foreach (var (dx, dy) in pushes)
+                {
+                    int nx = (int)neighbor.gridPos.X;
+                    int ny = (int)neighbor.gridPos.Y;
+                    int tx = nx + dx;
+                    int ty = ny + dy;
+
+                    if (grid.IsValidCell(tx, ty) && grid.IsEmpty(tx, ty))
+                    {
+                        // Push liquid aside
+                        grid.Swap(nx, ny, tx, ty);
+                        // NOW immediately move self into the neighbor's old position
+                        grid.Swap((int)gridPos.X, (int)gridPos.Y, targetX, targetY);
+                        return true;
+                    }
+                }
+
+                // If can't push, swap directly with liquid
+                grid.Swap((int)gridPos.X, (int)gridPos.Y, targetX, targetY);
+                return true;
+            }
+
+
+            return false;
+        }
+
+
+
     }
 }
