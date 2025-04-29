@@ -98,7 +98,11 @@ namespace Ation.Simulation
         private bool TryMove(SimulationGrid grid, ref int x, ref int y, int dx, int dy)
         {
             int nx = x + dx, ny = y + dy;
-            if (!grid.IsValidCell(nx, ny) || !grid.IsEmpty(nx, ny))
+            if (!grid.IsValidCell(nx, ny))
+                return false;
+
+            var target = grid.Get(nx, ny);
+            if (target != null && target.Type != MaterialType.Water)
                 return false;
 
             grid.Swap(x, y, nx, ny);

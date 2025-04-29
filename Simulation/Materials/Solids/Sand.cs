@@ -12,6 +12,7 @@ namespace Ation.Simulation
         {
             Color = Color.Yellow;
             Mass = 1.0f;
+            Health = 150;
         }
 
         protected override bool ActOnImmovableSolid(ImmovableSolid solid)

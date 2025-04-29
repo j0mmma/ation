@@ -89,7 +89,7 @@ namespace Ation.Simulation
             { MaterialType.Smoke, pos => new Smoke(pos) },
             { MaterialType.Eraser, pos => new Eraser(pos) },
             { MaterialType.Fire, pos => new Fire(pos) },
-            // { MaterialType.Acid, pos => new Acid(pos) },
+            { MaterialType.Acid, pos => new Acid(pos) },
             { MaterialType.AcidVapor, pos => new AcidVapor(pos) },
         };
 
@@ -106,6 +106,7 @@ namespace Ation.Simulation
         {
             MaterialType.Sand => MaterialClass.MovableSolid,
             MaterialType.Water => MaterialClass.Liquid,
+            MaterialType.Acid => MaterialClass.Liquid,
             MaterialType.Smoke => MaterialClass.Gas,
             MaterialType.Wood => MaterialClass.ImmovableSolid,
             MaterialType.Eraser => MaterialClass.Eraser,

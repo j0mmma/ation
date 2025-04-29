@@ -1,45 +1,90 @@
-// using System.Numerics;
-// using Raylib_cs;
-// using Ation.Common;
+using System.Numerics;
+using Raylib_cs;
+using Ation.Common;
 
-// namespace Ation.Simulation
-// {
-//     public class Acid : Liquid
-//     {
-//         public override string DisplayName => "Acid";
-//         public override MaterialType Type => MaterialType.Acid;
+namespace Ation.Simulation
+{
+    public class Acid : Liquid
+    {
+        public override string DisplayName => "Acid";
+        public override MaterialType Type => MaterialType.Acid;
 
-//         private static readonly Random rng = new();
+        private static readonly Random rng = new();
 
-//         public Acid(Vector2 worldPos) : base(worldPos)
-//         {
-//             Color = new Color(0, 255, 0, 255); // Bright green
-//             Mass = 1.0f;
-//         }
+        public Acid(Vector2 worldPos) : base(worldPos)
+        {
+            Color = new Color(0, 255, 0, 255);
+            Mass = 1.0f;
+            Damage = 50f;
+            Health = 1000;
+        }
 
-//         public override bool ActOnNeighbor(Material neighbor, int selfX, int selfY, int neighborX, int neighborY, SimulationGrid grid)
-//         {
-//             if (neighbor == null) return false;
+        public override void Step(SimulationGrid grid)
+        {
 
-//             // Try to corrode solids (movable or immovable)
-//             if (neighbor is MovableSolid || neighbor is ImmovableSolid)
-//             {
-//                 if (rng.NextDouble() < 0.05) // 5% chance per frame
-//                 {
-//                     // Corrode the neighbor
-//                     grid.Clear(targetX, targetY);
 
-//                     // Chance to evaporate into vapor
-//                     if (rng.NextDouble() < 0.3) // 30% chance
-//                     {
-//                         grid.Set((int)gridPos.X, (int)gridPos.Y, new AcidVapor(Utils.GridToWorld(gridPos)));
-//                     }
+            int x = (int)gridPos.X;
+            int y = (int)gridPos.Y;
 
-//                     return true;
-//                 }
-//             }
+            float dt = Raylib.GetFrameTime();
+            float totalDamageThisFrame = 0f;
 
-//             return false;
-//         }
-//     }
-// }
+            foreach ((int dx, int dy) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+            {
+                var neighbor = grid.Get(x + dx, y + dy);
+                if (neighbor == null) continue;
+
+                bool damaged = neighbor switch
+                {
+                    MovableSolid m => ActOnMovableSolid(m, x + dx, y + dy, grid),
+                    ImmovableSolid i => ActOnImmovableSolid(i, x + dx, y + dy, grid),
+                    Liquid l => ActOnLiquid(l, x + dx, y + dy, grid),
+                    _ => false
+                };
+
+                if (damaged)
+                {
+                    totalDamageThisFrame += Damage * dt;
+                    grid.Set(x, y, new AcidVapor(Utils.GridToWorld(gridPos)));
+                }
+            }
+
+            if (Health.HasValue)
+                Health -= totalDamageThisFrame;
+
+            if (Health is <= 0)
+                grid.Set(x, y, new AcidVapor(Utils.GridToWorld(gridPos)));
+
+            base.Step(grid);
+        }
+
+        public bool ActOnMovableSolid(MovableSolid solid, int x, int y, SimulationGrid grid)
+        {
+            return Corrode(solid, x, y, grid);
+        }
+
+        protected bool ActOnImmovableSolid(ImmovableSolid solid, int x, int y, SimulationGrid grid)
+        {
+            return Corrode(solid, x, y, grid);
+        }
+
+        protected bool ActOnLiquid(Liquid liquid, int x, int y, SimulationGrid grid)
+        {
+            return Corrode(liquid, x, y, grid);
+        }
+
+        private bool Corrode(Material target, int x, int y, SimulationGrid grid)
+        {
+            if (target.Type is MaterialType.Wood or MaterialType.Sand or MaterialType.Water)
+            {
+                if (rng.NextDouble() < 0.05)
+                {
+                    grid.Clear(x, y);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+}
