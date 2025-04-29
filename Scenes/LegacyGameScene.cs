@@ -39,8 +39,19 @@ namespace Ation.Game
 
         public override void ProcessInput()
         {
-            if (Raylib.IsKeyPressed(KeyboardKey.Zero) || Raylib.IsKeyPressed(KeyboardKey.Kp0))
-                selectedTool = Tool.Wand;
+            //     if (Raylib.IsKeyPressed(KeyboardKey.Zero) || Raylib.IsKeyPressed(KeyboardKey.Kp0))
+            //         selectedTool = Tool.Wand;
+
+            if (Raylib.IsMouseButtonDown(MouseButton.Right))
+            {
+                Vector2 mouseWorld = Raylib.GetMousePosition();
+                Vector2 gridPos = Utils.WorldToGrid(mouseWorld);
+                int x = (int)gridPos.X;
+                int y = (int)gridPos.Y;
+
+                sim.Explode(x, y, radius: 6, force: 500f);
+            }
+
 
             foreach (var (key, matType) in materialBindings)
             {

@@ -74,7 +74,8 @@ namespace Ation.Simulation
         Wood,
         Fire,
         Eraser,
-        Empty
+        Empty,
+        Particle,
     }
 
 

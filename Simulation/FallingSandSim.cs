@@ -62,6 +62,12 @@ namespace Ation.Simulation
             }
         }
 
+        public void Explode(int cx, int cy, int radius, float force)
+        {
+            var explosion = new Explosion(grid, cx, cy, radius, force);
+            explosion.Enact();
+        }
+
         public void AddMaterial(Vector2 worldPos, MaterialType type, int radius = 3)
         {
             var gridPos = Utils.WorldToGrid(worldPos);
