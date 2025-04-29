@@ -7,9 +7,12 @@ namespace Ation.Simulation
     public abstract class Liquid : Material
     {
         protected float speedClamp = 200f;
-        protected float friction = 0.9f;
+        protected float friction = 0.1f;
         // flip once per frame to avoid bias
         private static bool toggleFlowDirection = false;
+        public float VerticalDamping { get; protected set; } = 0.5f; // How much vertical speed is damped (0.5 = 50%)
+        public float TurbulenceStrength { get; protected set; } = 0.01f; // Max random X velocity to apply
+
 
         public Liquid(Vector2 worldPos) : base(worldPos) { }
 
@@ -88,9 +91,22 @@ namespace Ation.Simulation
         private bool TryMove(SimulationGrid grid, ref int x, ref int y, int dx, int dy)
         {
             int nx = x + dx, ny = y + dy;
-            if (!grid.IsValidCell(nx, ny) || !grid.IsEmpty(nx, ny))
-                return false;
+            if (!grid.IsValidCell(nx, ny)) return false;
 
+            if (!grid.IsEmpty(nx, ny)) return false;
+
+            // When moving horizontally (liquid spreading), enforce support AND no diagonal block
+            if (dy == 0)
+            {
+                var below = grid.Get(nx, ny + 1);
+                if (below == null) return false;
+
+                var cornerBlocker = grid.Get(x + dx, y + 1); // e.g., wall right-below current
+                if (cornerBlocker is ImmovableSolid)
+                    return false;
+            }
+
+            // Move
             grid.Swap(x, y, nx, ny);
             x = nx;
             y = ny;
@@ -98,6 +114,8 @@ namespace Ation.Simulation
             IsActive = true;
             return true;
         }
+
+
 
 
     }

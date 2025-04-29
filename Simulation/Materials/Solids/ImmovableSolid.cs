@@ -15,10 +15,10 @@ namespace Ation.Simulation
             IsActive = false;
         }
 
-        public override bool ActOnNeighbor(Material neighbor, int targetX, int targetY, SimulationGrid grid)
-        {
-            // Immovable solids don't interact with neighbors actively
-            return false;
-        }
+        // public override bool ActOnNeighbor(Material neighbor, int targetX, int targetY, SimulationGrid grid)
+        // {
+        //     // Immovable solids don't interact with neighbors actively
+        //     return false;
+        // }
     }
 }

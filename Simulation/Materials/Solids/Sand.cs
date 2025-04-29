@@ -13,5 +13,14 @@ namespace Ation.Simulation
             Color = Color.Yellow;
             Mass = 1.0f;
         }
+
+        protected override bool ActOnImmovableSolid(ImmovableSolid solid)
+        {
+            // Instead of turning red (like default MovableSolid), turn GREEN
+            this.Color = Color.Green;
+            SetActive(); // Mark as changed so it updates visually
+
+            return false; // No swap happens, just color change
+        }
     }
 }

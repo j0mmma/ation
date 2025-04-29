@@ -12,6 +12,14 @@ namespace Ation.Simulation
         {
             Color = Raylib_cs.Color.Black;
             Mass = 0.2f; // Light mass
+            Lifetime = 0.1f + Raylib.GetRandomValue(0, 1000) / 1000f * 0.5f;
+        }
+
+        public Smoke(Vector2 pos, float minLifetime, float maxLifetime) : base(pos)
+        {
+            Color = Raylib_cs.Color.Black;
+            Mass = 0.2f;
+            Lifetime = minLifetime + Raylib.GetRandomValue(0, 1000) / 1000f * (maxLifetime - minLifetime);
         }
     }
 }

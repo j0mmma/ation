@@ -23,8 +23,10 @@ namespace Ation.Game
         {
             { KeyboardKey.One, MaterialType.Sand },
             { KeyboardKey.Two, MaterialType.Water },
-            { KeyboardKey.Three, MaterialType.Wall },
-            { KeyboardKey.Four, MaterialType.Smoke },
+            { KeyboardKey.Three, MaterialType.Wood },
+            { KeyboardKey.Five, MaterialType.Acid },
+            { KeyboardKey.Six, MaterialType.Smoke },
+            { KeyboardKey.Seven, MaterialType.Fire },
             { KeyboardKey.Zero, MaterialType.Eraser }, // Eraser
         };
 

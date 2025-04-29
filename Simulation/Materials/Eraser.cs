@@ -40,10 +40,10 @@ namespace Ation.Simulation
             grid.Set(x, y, null);
         }
 
-        public override bool ActOnNeighbor(Material neighbor, int targetX, int targetY, SimulationGrid grid)
-        {
-            // Not used, Eraser acts in Step() directly
-            return false;
-        }
+        // public override bool ActOnNeighbor(Material neighbor, int targetX, int targetY, SimulationGrid grid)
+        // {
+        //     // Not used, Eraser acts in Step() directly
+        //     return false;
+        // }
     }
 }

@@ -8,7 +8,6 @@ namespace Ation.Simulation
     {
         protected float speedClamp = 100f;
         protected float friction = 0.95f;
-        private static bool toggleFlowDirection = false;
 
         public Gas(Vector2 worldPos) : base(worldPos) { }
 
@@ -16,9 +15,21 @@ namespace Ation.Simulation
         {
             UpdatedThisFrame = true;
             IsActive = false;
+            float dt = Raylib.GetFrameTime();
+
+            // Lifetime handling
+            if (Lifetime.HasValue)
+            {
+                Lifetime -= dt;
+                if (Lifetime <= 0)
+                {
+                    grid.Clear((int)gridPos.X, (int)gridPos.Y);
+                    return;
+                }
+            }
+
 
             // 1) apply upward force (buoyancy) & integrate
-            float dt = Raylib.GetFrameTime();
             ApplyForce(FallingSandSim.Gravity * new Vector2(0, -0.2f));
             Integrate(dt);
 
@@ -98,10 +109,10 @@ namespace Ation.Simulation
             return true;
         }
 
-        public override bool ActOnNeighbor(Material neighbor, int targetX, int targetY, SimulationGrid grid)
-        {
-            // Gas typically doesn't push anything
-            return false;
-        }
+        // public override bool ActOnNeighbor(Material neighbor, int targetX, int targetY, SimulationGrid grid)
+        // {
+        //     // Gas typically doesn't push anything
+        //     return false;
+        // }
     }
 }
