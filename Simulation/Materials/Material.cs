@@ -20,9 +20,9 @@ namespace Ation.Simulation
         public float Damage { get; set; } = 0; // Tunable, per second
         public float Flammability { get; set; } = 0.0f;
         public bool IsOnFire { get; set; } = false;
+        public float ExplosionResistance { get; set; } = 1f;
 
-
-        public Color Color;
+        public Color Color { get; set; }
         public abstract string DisplayName { get; }
         public bool UpdatedThisFrame = false;
         public bool IsActive = false;
@@ -76,6 +76,7 @@ namespace Ation.Simulation
         Eraser,
         Empty,
         Particle,
+        FallingImmovable,
     }
 
 

@@ -49,7 +49,7 @@ namespace Ation.Game
                 int x = (int)gridPos.X;
                 int y = (int)gridPos.Y;
 
-                sim.Explode(x, y, radius: 6, force: 500f);
+                sim.Explode(x, y, radius: 15, force: 500f);
             }
 
 

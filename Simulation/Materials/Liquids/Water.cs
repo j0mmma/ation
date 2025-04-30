@@ -14,6 +14,8 @@ namespace Ation.Simulation
             Color = Color.Blue;
             Mass = 1.0f;
             VerticalDamping = 0.3f;
+            Health = 300;
+            ExplosionResistance = 1f;
         }
 
         public override void Step(SimulationGrid grid)

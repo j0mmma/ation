@@ -7,36 +7,30 @@ namespace Ation.Simulation
     public class Particle : Material
     {
         private Vector2 velocity;
-        private float lifetime = 2f; // shorter lifetime for visual tests
+        private float lifetime = 2f;
+        private readonly Material? carriedMaterial;
 
         public override string DisplayName => "Particle";
-        public override MaterialType Type => MaterialType.Particle; // no special type
+        public override MaterialType Type => MaterialType.Particle;
 
-        public Particle(Vector2 worldPos, Vector2 initialVelocity, Color color)
+        public Particle(Vector2 worldPos, Vector2 initialVelocity, Color color, Material? carriedMaterial = null)
             : base(worldPos)
         {
             this.velocity = initialVelocity;
             this.Color = color;
+            this.carriedMaterial = carriedMaterial;
         }
 
         public override void Step(SimulationGrid grid)
         {
             float dt = Raylib.GetFrameTime();
 
-            // Apply gravity and optional small turbulence
             velocity += FallingSandSim.Gravity * dt;
-            velocity.X += Raylib.GetRandomValue(-100, 100) / 1000f * 50f; // optional horizontal wobble
+            velocity.X += Raylib.GetRandomValue(-100, 100) / 1000f * 50f;
             velocity = Vector2.Clamp(velocity, new Vector2(-800, -800), new Vector2(800, 800));
 
-            // Decrease lifetime
             lifetime -= dt;
-            if (lifetime <= 0)
-            {
-                grid.Clear((int)gridPos.X, (int)gridPos.Y);
-                return;
-            }
 
-            // Move
             Vector2 newWorldPos = worldPos + velocity * dt;
             Vector2 newGridPos = Utils.WorldToGrid(newWorldPos);
             int nx = (int)newGridPos.X;
@@ -44,7 +38,7 @@ namespace Ation.Simulation
 
             if (!grid.IsValidCell(nx, ny))
             {
-                grid.Clear((int)gridPos.X, (int)gridPos.Y);
+                TryReplaceSelf(grid);
                 return;
             }
 
@@ -58,9 +52,28 @@ namespace Ation.Simulation
             }
             else
             {
-                // If it hits something solid/liquid -> just clear itself (disappear)
-                grid.Clear((int)gridPos.X, (int)gridPos.Y);
+                TryReplaceSelf(grid);
+            }
+        }
+
+        private void TryReplaceSelf(SimulationGrid grid)
+        {
+            int x = (int)gridPos.X;
+            int y = (int)gridPos.Y;
+
+            if (carriedMaterial != null)
+            {
+                Material toPlace = carriedMaterial is ImmovableSolid
+                    ? new FallingImmovable(carriedMaterial)
+                    : carriedMaterial;
+
+                grid.Set(x, y, toPlace);
+            }
+            else
+            {
+                grid.Clear(x, y);
             }
         }
     }
+
 }

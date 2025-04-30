@@ -41,23 +41,32 @@ namespace Ation.Simulation
                     float dist = MathF.Sqrt(distSq);
                     float falloff = 1f - (dist / radius);
 
-                    // // Spawn new flying particles ONLY
-                    // Vector2 dir = Vector2.Normalize(new Vector2(dx, dy)); // upward bias
-                    // Vector2 impulse = dir * (force * falloff) + new Vector2(0, -force * 1.7f);
+                    Vector2 dir = Vector2.Normalize(new Vector2(dx, dy - 2));
+                    Vector2 impulse = dir * (force * falloff) + new Vector2(0, -force * 1.2f);
 
-                    Vector2 dir = Vector2.Normalize(new Vector2(dx, dy));
-                    Vector2 impulse = dir * force;
+                    var current = grid.Get(x, y);
 
-                    var flying = new Particle(
-                        Utils.GridToWorld(new Vector2(x, y)),
-                        impulse,
-                        Raylib_cs.Color.Red
+                    // Launch real material if present
+                    if (current != null && !(current is Gas) && !(current is Particle))
+                    {
+
+                        var flying = new Particle(
+                            Utils.GridToWorld(new Vector2(x, y)),
+                            impulse,
+                            current.Color,
+                            current
                         );
-
-                    if (Raylib.GetRandomValue(0, 100) > 50) continue;
-                    grid.Set(x, y, flying);
+                        grid.Set(x, y, flying);
+                    }
+                    // Otherwise maybe spawn smoke
+                    if (Raylib.GetRandomValue(0, 100) < 40)
+                    {
+                        var smoke = new Smoke(Utils.GridToWorld(new Vector2(x, y)));
+                        grid.Set(x, y, smoke);
+                    }
                 }
             }
         }
+
     }
 }

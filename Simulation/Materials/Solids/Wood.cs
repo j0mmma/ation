@@ -15,6 +15,7 @@ namespace Ation.Simulation
             Mass = float.PositiveInfinity;
             Health = 250;
             Flammability = 0.9f; // Highly flammable
+            ExplosionResistance = 0.9f;
         }
 
         public override void Step(SimulationGrid grid)
