@@ -13,8 +13,8 @@ namespace Ation.Simulation
         {
             Color = Raylib_cs.Color.Brown;
             Mass = float.PositiveInfinity;
-            Health = 250;
-            Flammability = 0.9f; // Highly flammable
+            Health = 350;
+            Flammability = 0.7f; // Highly flammable
             ExplosionResistance = 0.9f;
         }
 
