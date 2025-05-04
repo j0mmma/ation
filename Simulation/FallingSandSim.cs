@@ -2,6 +2,8 @@ using System.Numerics;
 using System.Linq;
 
 using Ation.Common;
+using Ation.GameWorld;
+
 using Raylib_cs;
 
 namespace Ation.Simulation
@@ -79,39 +81,37 @@ namespace Ation.Simulation
 
 
 
-        public void Render()
+        public void Render(List<Chunk> visibleChunks)
         {
-            if (context is IChunkedMaterialContext chunked)
+            foreach (var chunk in visibleChunks)
             {
-                foreach (var chunk in chunked.GetAllChunks().ToList())
+                int offsetX = chunk.ChunkX * chunk.Size.Width;
+                int offsetY = chunk.ChunkY * chunk.Size.Height;
+                var (width, height) = chunk.Size;
+
+                for (int y = 0; y < height; y++)
                 {
-                    int offsetX = chunk.ChunkX * chunk.Size.Width;
-                    int offsetY = chunk.ChunkY * chunk.Size.Height;
-                    var (width, height) = chunk.Size;
-
-                    for (int y = 0; y < height; y++)
+                    for (int x = 0; x < width; x++)
                     {
-                        for (int x = 0; x < width; x++)
-                        {
-                            var m = chunk.Grid.Get(x, y);
-                            if (m == null) continue;
+                        var m = chunk.Grid.Get(x, y);
+                        if (m == null) continue;
 
-                            int worldX = (offsetX + x) * Variables.PixelSize;
-                            int worldY = (offsetY + y) * Variables.PixelSize;
+                        int worldX = (offsetX + x) * Variables.PixelSize;
+                        int worldY = (offsetY + y) * Variables.PixelSize;
 
-                            Raylib.DrawRectangle(worldX, worldY, Variables.PixelSize, Variables.PixelSize, m.Color);
-                        }
+                        Raylib.DrawRectangle(worldX, worldY, Variables.PixelSize, Variables.PixelSize, m.Color);
                     }
-
-                    int chunkPixelX = offsetX * Variables.PixelSize;
-                    int chunkPixelY = offsetY * Variables.PixelSize;
-                    int widthPx = width * Variables.PixelSize;
-                    int heightPx = height * Variables.PixelSize;
-
-                    Raylib.DrawRectangleLines(chunkPixelX, chunkPixelY, widthPx, heightPx, Color.Red);
                 }
+
+                int chunkPixelX = offsetX * Variables.PixelSize;
+                int chunkPixelY = offsetY * Variables.PixelSize;
+                int widthPx = width * Variables.PixelSize;
+                int heightPx = height * Variables.PixelSize;
+
+                Raylib.DrawRectangleLines(chunkPixelX, chunkPixelY, widthPx, heightPx, Color.Red);
             }
         }
+
 
 
 

@@ -118,9 +118,10 @@ namespace Ation.Game
 
         public override void Render()
         {
-            var (minCX, maxCX, minCY, maxCY) = GetVisibleChunkBounds();
+            var renderableChunks = GetRenderableChunks();
             Raylib.BeginMode2D(camera);
-            sim.Render();
+
+            sim.Render(renderableChunks);
 
             Raylib.EndMode2D();
 
@@ -129,6 +130,7 @@ namespace Ation.Game
             Raylib.DrawText($"FPS: {Raylib.GetFPS()}", 12, 12, 20, Color.Black);
             Raylib.DrawText($"Particles: {sim.CountMaterials()}", 12, 35, 20, Color.Black);
             Raylib.DrawText($"Chunks: {world.ChunkCount()}", 12, 110, 20, Color.Black);
+            Raylib.DrawText($"Renderable chunks: {renderableChunks.Count()}", 12, 130, 20, Color.Black);
 
             Vector2 mouse = Raylib.GetMousePosition();
             Raylib.DrawCircleLines((int)mouse.X, (int)mouse.Y, brushRadius * Variables.PixelSize, Color.Red);
@@ -152,6 +154,42 @@ namespace Ation.Game
 
             return (minChunkX, maxChunkX, minChunkY, maxChunkY);
         }
+
+        private List<Chunk> GetRenderableChunks()
+        {
+            Vector2 topLeft = Raylib.GetScreenToWorld2D(Vector2.Zero, camera);
+            Vector2 bottomRight = Raylib.GetScreenToWorld2D(new Vector2(Raylib.GetScreenWidth(), Raylib.GetScreenHeight()), camera);
+
+            float viewLeft = topLeft.X;
+            float viewTop = topLeft.Y;
+            float viewRight = bottomRight.X;
+            float viewBottom = bottomRight.Y;
+
+            var result = new List<Chunk>();
+            foreach (var chunk in world.GetAllChunks())
+            {
+                float chunkLeft = chunk.ChunkX * Variables.ChunkSize * Variables.PixelSize;
+                float chunkTop = chunk.ChunkY * Variables.ChunkSize * Variables.PixelSize;
+                float chunkRight = chunkLeft + Variables.ChunkSize * Variables.PixelSize;
+                float chunkBottom = chunkTop + Variables.ChunkSize * Variables.PixelSize;
+
+                // Keep the chunk if it overlaps the view
+                bool overlaps =
+                    chunkRight > viewLeft &&
+                    chunkLeft < viewRight &&
+                    chunkBottom > viewTop &&
+                    chunkTop < viewBottom;
+
+                if (overlaps)
+                    result.Add(chunk);
+            }
+
+            return result;
+        }
+
+
+
+
 
     }
 }
