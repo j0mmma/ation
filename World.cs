@@ -9,7 +9,7 @@ namespace Ation.GameWorld
     {
         private readonly int chunkSize;
         private readonly Dictionary<(int, int), Chunk> chunks = new();
-        private readonly int maxWorldSize = 10; // Maximum number of chunks in each direction
+        private readonly int maxWorldSize = 5; // Maximum number of chunks in each direction
 
 
         public World(int chunkSize)

@@ -50,9 +50,11 @@ namespace Ation.Game
 
         public override void ProcessInput()
         {
+            Vector2 mouseScreen = Raylib.GetMousePosition();
+            Vector2 mouseWorld = Raylib.GetScreenToWorld2D(mouseScreen, camera);
+
             if (Raylib.IsMouseButtonDown(MouseButton.Right))
             {
-                Vector2 mouseWorld = Raylib.GetMousePosition();
                 Vector2 gridPos = Utils.WorldToGrid(mouseWorld);
                 int x = (int)gridPos.X;
                 int y = (int)gridPos.Y;
@@ -60,7 +62,7 @@ namespace Ation.Game
                 sim.Explode(x, y, radius: 15, force: 500f);
             }
 
-            float cameraSpeed = 500f * Raylib.GetFrameTime();
+            float cameraSpeed = 800f * Raylib.GetFrameTime();
             if (Raylib.IsKeyDown(KeyboardKey.W)) camera.Target.Y -= cameraSpeed;
             if (Raylib.IsKeyDown(KeyboardKey.S)) camera.Target.Y += cameraSpeed;
             if (Raylib.IsKeyDown(KeyboardKey.A)) camera.Target.X -= cameraSpeed;
@@ -83,22 +85,20 @@ namespace Ation.Game
                 brushRadius = Math.Clamp(brushRadius, minBrushRadius, maxBrushRadius);
             }
 
-            Vector2 mousePos = Raylib.GetMousePosition();
-
             if (firstFrame)
             {
-                previousMousePos = mousePos;
+                previousMousePos = mouseWorld;
                 firstFrame = false;
             }
 
             if (Raylib.IsMouseButtonDown(MouseButton.Left) && selectedTool == Tool.Material)
             {
-                float distance = Vector2.Distance(previousMousePos, mousePos);
+                float distance = Vector2.Distance(previousMousePos, mouseWorld);
                 int steps = Math.Max(1, (int)(distance / (Variables.PixelSize / 2)));
 
                 for (int i = 0; i <= steps; i++)
                 {
-                    Vector2 pos = Vector2.Lerp(previousMousePos, mousePos, (float)i / steps);
+                    Vector2 pos = Vector2.Lerp(previousMousePos, mouseWorld, (float)i / steps);
 
                     if (selectedMaterial == MaterialType.Empty)
                         sim.ClearMaterials(pos, brushRadius);
@@ -107,8 +107,9 @@ namespace Ation.Game
                 }
             }
 
-            previousMousePos = mousePos;
+            previousMousePos = mouseWorld;
         }
+
 
         public override void Update(float dt)
         {
@@ -117,7 +118,11 @@ namespace Ation.Game
 
         public override void Render()
         {
+            var (minCX, maxCX, minCY, maxCY) = GetVisibleChunkBounds();
+            Raylib.BeginMode2D(camera);
             sim.Render();
+
+            Raylib.EndMode2D();
 
             Raylib.DrawText($"Material: {selectedMaterial}", 12, 60, 20, Color.Black);
             Raylib.DrawText($"Brush Size: {brushRadius}", 12, 85, 20, Color.Black);
@@ -128,5 +133,25 @@ namespace Ation.Game
             Vector2 mouse = Raylib.GetMousePosition();
             Raylib.DrawCircleLines((int)mouse.X, (int)mouse.Y, brushRadius * Variables.PixelSize, Color.Red);
         }
+
+
+        private (int minChunkX, int maxChunkX, int minChunkY, int maxChunkY) GetVisibleChunkBounds()
+        {
+            Vector2 topLeft = Raylib.GetScreenToWorld2D(Vector2.Zero, camera);
+            Vector2 bottomRight = Raylib.GetScreenToWorld2D(new Vector2(Raylib.GetScreenWidth(), Raylib.GetScreenHeight()), camera);
+
+            int minX = (int)MathF.Floor(topLeft.X / Variables.PixelSize);
+            int minY = (int)MathF.Floor(topLeft.Y / Variables.PixelSize);
+            int maxX = (int)MathF.Ceiling(bottomRight.X / Variables.PixelSize);
+            int maxY = (int)MathF.Ceiling(bottomRight.Y / Variables.PixelSize);
+
+            int minChunkX = minX / Variables.ChunkSize;
+            int maxChunkX = maxX / Variables.ChunkSize;
+            int minChunkY = minY / Variables.ChunkSize;
+            int maxChunkY = maxY / Variables.ChunkSize;
+
+            return (minChunkX, maxChunkX, minChunkY, maxChunkY);
+        }
+
     }
 }
