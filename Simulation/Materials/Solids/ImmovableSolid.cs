@@ -6,6 +6,8 @@ namespace Ation.Simulation
 {
     public abstract class ImmovableSolid : Material
     {
+        public override bool IsCollidable => true;
+
         public ImmovableSolid(Vector2 worldPos) : base(worldPos) { }
 
         public override void Step(IMaterialContext grid)

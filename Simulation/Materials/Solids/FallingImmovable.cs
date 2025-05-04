@@ -6,6 +6,8 @@ namespace Ation.Simulation
 {
     public class FallingImmovable : MovableSolid
     {
+        public override bool IsCollidable => true;
+
         public override string DisplayName => "Debris";
         public override MaterialType Type => MaterialType.FallingImmovable;
 

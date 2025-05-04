@@ -8,6 +8,7 @@ namespace Ation.Simulation
     {
         protected float friction = 0.9f;
         protected float speedClamp = 200f;
+        public override bool IsCollidable => true;
 
         public MovableSolid(Vector2 worldPos) : base(worldPos) { }
 

@@ -63,10 +63,10 @@ namespace Ation.Game
             }
 
             float cameraSpeed = 800f * Raylib.GetFrameTime();
-            if (Raylib.IsKeyDown(KeyboardKey.W)) camera.Target.Y -= cameraSpeed;
-            if (Raylib.IsKeyDown(KeyboardKey.S)) camera.Target.Y += cameraSpeed;
-            if (Raylib.IsKeyDown(KeyboardKey.A)) camera.Target.X -= cameraSpeed;
-            if (Raylib.IsKeyDown(KeyboardKey.D)) camera.Target.X += cameraSpeed;
+            if (Raylib.IsKeyDown(KeyboardKey.Up)) camera.Target.Y -= cameraSpeed;
+            if (Raylib.IsKeyDown(KeyboardKey.Down)) camera.Target.Y += cameraSpeed;
+            if (Raylib.IsKeyDown(KeyboardKey.Left)) camera.Target.X -= cameraSpeed;
+            if (Raylib.IsKeyDown(KeyboardKey.Right)) camera.Target.X += cameraSpeed;
 
             foreach (var (key, matType) in materialBindings)
             {

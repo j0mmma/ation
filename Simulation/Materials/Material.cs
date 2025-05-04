@@ -27,6 +27,8 @@ namespace Ation.Simulation
         public abstract string DisplayName { get; }
         public bool UpdatedThisFrame = false;
         public bool IsActive = false;
+        public virtual bool IsCollidable => false;
+
 
         public virtual void ApplyForce(Vector2 force) => NetForce += force;
 
