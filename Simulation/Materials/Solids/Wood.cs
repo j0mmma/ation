@@ -88,6 +88,8 @@ namespace Ation.Simulation
             {
                 grid.Set((int)gridPos.X, (int)gridPos.Y, new Smoke(Utils.GridToWorld(gridPos), 0.6f, 2f));
             }
+
+
         }
 
         private void TrySpreadFireToNeighbor(IMaterialContext grid)

@@ -114,6 +114,7 @@ namespace Ation.Game
         public override void Update(float dt)
         {
             sim.Update(dt);
+            world.RemoveEmptyChunks();
         }
 
         public override void Render()
@@ -122,6 +123,14 @@ namespace Ation.Game
             Raylib.BeginMode2D(camera);
 
             sim.Render(renderableChunks);
+            int sizePx = Variables.ChunkSize * Variables.PixelSize;
+            int totalChunks = world.maxWorldSize * 2 + 1;
+            int totalSizePx = totalChunks * sizePx;
+
+            int topLeftX = -world.maxWorldSize * sizePx;
+            int topLeftY = -world.maxWorldSize * sizePx;
+
+            Raylib.DrawRectangleLines(topLeftX, topLeftY, totalSizePx, totalSizePx, Color.Green);
 
             Raylib.EndMode2D();
 
@@ -136,24 +145,6 @@ namespace Ation.Game
             Raylib.DrawCircleLines((int)mouse.X, (int)mouse.Y, brushRadius * Variables.PixelSize, Color.Red);
         }
 
-
-        private (int minChunkX, int maxChunkX, int minChunkY, int maxChunkY) GetVisibleChunkBounds()
-        {
-            Vector2 topLeft = Raylib.GetScreenToWorld2D(Vector2.Zero, camera);
-            Vector2 bottomRight = Raylib.GetScreenToWorld2D(new Vector2(Raylib.GetScreenWidth(), Raylib.GetScreenHeight()), camera);
-
-            int minX = (int)MathF.Floor(topLeft.X / Variables.PixelSize);
-            int minY = (int)MathF.Floor(topLeft.Y / Variables.PixelSize);
-            int maxX = (int)MathF.Ceiling(bottomRight.X / Variables.PixelSize);
-            int maxY = (int)MathF.Ceiling(bottomRight.Y / Variables.PixelSize);
-
-            int minChunkX = minX / Variables.ChunkSize;
-            int maxChunkX = maxX / Variables.ChunkSize;
-            int minChunkY = minY / Variables.ChunkSize;
-            int maxChunkY = maxY / Variables.ChunkSize;
-
-            return (minChunkX, maxChunkX, minChunkY, maxChunkY);
-        }
 
         private List<Chunk> GetRenderableChunks()
         {

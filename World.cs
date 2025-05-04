@@ -9,7 +9,7 @@ namespace Ation.GameWorld
     {
         private readonly int chunkSize;
         private readonly Dictionary<(int, int), Chunk> chunks = new();
-        private readonly int maxWorldSize = 5; // Maximum number of chunks in each direction
+        public readonly int maxWorldSize = 2; // Maximum number of chunks in each direction
 
 
         public World(int chunkSize)
@@ -33,8 +33,9 @@ namespace Ation.GameWorld
             if (localX < 0) { chunkX--; localX += chunkSize; }
             if (localY < 0) { chunkY--; localY += chunkSize; }
 
-            // Check bounds before proceeding
-            if (Math.Abs(chunkX) >= maxWorldSize || Math.Abs(chunkY) >= maxWorldSize)
+            // Correct world bounds check (inclusive range)
+            if (chunkX < -maxWorldSize || chunkX > maxWorldSize ||
+                chunkY < -maxWorldSize || chunkY > maxWorldSize)
                 return null;
 
             var key = (chunkX, chunkY);
@@ -46,6 +47,7 @@ namespace Ation.GameWorld
 
             return (chunk, localX, localY);
         }
+
 
 
         public Material? Get(int x, int y)
@@ -98,6 +100,22 @@ namespace Ation.GameWorld
             }
         }
         public int ChunkCount() => chunks.Count;
+
+        public void RemoveEmptyChunks()
+        {
+            var keysToRemove = new List<(int, int)>();
+
+            foreach (var (key, chunk) in chunks)
+            {
+                if (chunk.Grid.Count() == 0)
+                    keysToRemove.Add(key);
+            }
+
+            foreach (var key in keysToRemove)
+                chunks.Remove(key);
+        }
+
+
 
         public IEnumerable<Chunk> GetAllChunks()
         {
