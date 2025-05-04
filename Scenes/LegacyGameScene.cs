@@ -8,6 +8,7 @@ namespace Ation.Game
 {
     public class LegacyGameScene : Scene
     {
+        private int levelCounter = 0;
         private readonly World world;
         private readonly FallingSandSim sim;
 
@@ -50,6 +51,16 @@ namespace Ation.Game
 
         public override void ProcessInput()
         {
+            if (Raylib.IsKeyPressed(KeyboardKey.F5))
+                LevelIO.Save($"Assets/save_{levelCounter++}.json", world);
+
+            if (Raylib.IsKeyPressed(KeyboardKey.F9))
+            {
+                world.chunks.Clear();
+                LevelIO.Load("Assets/test_level.json", world);
+            }
+
+
             Vector2 mouseScreen = Raylib.GetMousePosition();
             Vector2 mouseWorld = Raylib.GetScreenToWorld2D(mouseScreen, camera);
 
@@ -143,6 +154,14 @@ namespace Ation.Game
 
             Vector2 mouse = Raylib.GetMousePosition();
             Raylib.DrawCircleLines((int)mouse.X, (int)mouse.Y, brushRadius * Variables.PixelSize, Color.Red);
+
+            Vector2 mouseScreen = Raylib.GetMousePosition();
+            Vector2 mouseWorld = Raylib.GetScreenToWorld2D(mouseScreen, camera);
+            int gridX = (int)(mouseWorld.X / Variables.PixelSize);
+            int gridY = (int)(mouseWorld.Y / Variables.PixelSize);
+
+            Raylib.DrawText($"X:{gridX} Y:{gridY}", (int)mouseScreen.X + 12, (int)mouseScreen.Y + 12, 16, Color.DarkGray);
+
         }
 
 

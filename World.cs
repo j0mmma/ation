@@ -8,7 +8,7 @@ namespace Ation.GameWorld
     public class World : IChunkedMaterialContext
     {
         private readonly int chunkSize;
-        private readonly Dictionary<(int, int), Chunk> chunks = new();
+        public readonly Dictionary<(int, int), Chunk> chunks = new();
         public readonly int maxWorldSize = 2; // Maximum number of chunks in each direction
 
 

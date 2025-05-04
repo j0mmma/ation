@@ -7,7 +7,7 @@ namespace Ation.Simulation
     public class Water : Liquid
     {
         public override string DisplayName => "Water";
-        public override MaterialType Type => MaterialType.Sand;
+        public override MaterialType Type => MaterialType.Water;
 
         public Water(Vector2 worldPos) : base(worldPos)
         {
@@ -22,7 +22,7 @@ namespace Ation.Simulation
         {
             base.Step(grid); // Preserves default Liquid/Material behavior (like movement)
 
-            ExtinguishNearbyFire(grid);
+            //ExtinguishNearbyFire(grid);
         }
 
         private void ExtinguishNearbyFire(IMaterialContext grid)
