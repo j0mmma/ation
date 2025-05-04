@@ -18,14 +18,14 @@ namespace Ation.Simulation
             ExplosionResistance = 1f;
         }
 
-        public override void Step(SimulationGrid grid)
+        public override void Step(IMaterialContext grid)
         {
             base.Step(grid); // Preserves default Liquid/Material behavior (like movement)
 
             ExtinguishNearbyFire(grid);
         }
 
-        private void ExtinguishNearbyFire(SimulationGrid grid)
+        private void ExtinguishNearbyFire(IMaterialContext grid)
         {
             int x = (int)gridPos.X;
             int y = (int)gridPos.Y;

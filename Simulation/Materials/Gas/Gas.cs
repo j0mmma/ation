@@ -11,7 +11,7 @@ namespace Ation.Simulation
 
         public Gas(Vector2 worldPos) : base(worldPos) { }
 
-        public override void Step(SimulationGrid grid)
+        public override void Step(IMaterialContext grid)
         {
             UpdatedThisFrame = true;
             IsActive = false;
@@ -95,7 +95,7 @@ namespace Ation.Simulation
         }
 
         // helper to attempt a swap at (dx,dy)
-        private bool TryMove(SimulationGrid grid, ref int x, ref int y, int dx, int dy)
+        private bool TryMove(IMaterialContext grid, ref int x, ref int y, int dx, int dy)
         {
             int nx = x + dx, ny = y + dy;
             if (!grid.IsValidCell(nx, ny))

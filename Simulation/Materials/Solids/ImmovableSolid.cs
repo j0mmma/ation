@@ -8,7 +8,7 @@ namespace Ation.Simulation
     {
         public ImmovableSolid(Vector2 worldPos) : base(worldPos) { }
 
-        public override void Step(SimulationGrid grid)
+        public override void Step(IMaterialContext grid)
         {
             // Immovable solids don't need to do anything every frame
             UpdatedThisFrame = true;

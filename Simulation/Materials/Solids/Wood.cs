@@ -18,7 +18,7 @@ namespace Ation.Simulation
             ExplosionResistance = 0.9f;
         }
 
-        public override void Step(SimulationGrid grid)
+        public override void Step(IMaterialContext grid)
         {
             UpdatedThisFrame = true;
             IsActive = false;
@@ -30,7 +30,7 @@ namespace Ation.Simulation
         }
 
 
-        private void BurnIfIgnited(SimulationGrid grid)
+        private void BurnIfIgnited(IMaterialContext grid)
         {
             if (ExtinguishIfSubmerged(grid))
                 return;
@@ -90,7 +90,7 @@ namespace Ation.Simulation
             }
         }
 
-        private void TrySpreadFireToNeighbor(SimulationGrid grid)
+        private void TrySpreadFireToNeighbor(IMaterialContext grid)
         {
             var directions = new (int dx, int dy)[]
             {
@@ -115,7 +115,7 @@ namespace Ation.Simulation
             }
         }
 
-        private void SpreadFireAggressively(SimulationGrid grid)
+        private void SpreadFireAggressively(IMaterialContext grid)
         {
             foreach (var (dx, dy) in new[] { (0, 1), (0, -1), (1, 0), (-1, 0) })
             {
@@ -131,7 +131,7 @@ namespace Ation.Simulation
             }
         }
 
-        private void TrySpawnSmoke(SimulationGrid grid)
+        private void TrySpawnSmoke(IMaterialContext grid)
         {
             int smokeX = (int)gridPos.X;
             int smokeY = (int)gridPos.Y - 1;
@@ -139,7 +139,7 @@ namespace Ation.Simulation
                 grid.Set(smokeX, smokeY, new Smoke(Utils.GridToWorld(new Vector2(smokeX, smokeY)), 0.5f, 1.5f));
         }
 
-        private void TrySpawnFire(SimulationGrid grid)
+        private void TrySpawnFire(IMaterialContext grid)
         {
             int fireX = (int)gridPos.X;
             int fireY = (int)gridPos.Y - 1;
@@ -147,7 +147,7 @@ namespace Ation.Simulation
                 grid.Set(fireX, fireY, new Fire(Utils.GridToWorld(new Vector2(fireX, fireY))));
         }
 
-        private bool ExtinguishIfSubmerged(SimulationGrid grid)
+        private bool ExtinguishIfSubmerged(IMaterialContext grid)
         {
             bool extinguished = false;
 

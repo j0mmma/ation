@@ -1,4 +1,6 @@
 using System.Numerics;
+using System.Linq;
+
 using Ation.Common;
 using Raylib_cs;
 
@@ -6,65 +8,116 @@ namespace Ation.Simulation
 {
     class FallingSandSim
     {
-        private readonly SimulationGrid grid;
+        private readonly IMaterialContext context;
         public static Vector2 Gravity = new Vector2(0, 2000f);
         private int frameCounter = 0;
 
-        public FallingSandSim(int width, int height)
+        public FallingSandSim(IMaterialContext world)
         {
-            grid = new SimulationGrid(width, height);
+            context = world;
         }
 
         public void Update(float dt)
         {
-            grid.ResetFlags(); // Reset UpdatedThisFrame = false for all
-
+            context.ResetFlags();
             frameCounter++;
-            bool flipX = frameCounter % 2 == 0; // Flip X scan every frame
+            bool flipX = frameCounter % 2 == 0;
 
-            for (int y = grid.Size.Height - 1; y >= 0; y--)
+            void StepAll(int width, int height, Func<int, int, Material?> get)
             {
-                if (flipX)
+                for (int y = height - 1; y >= 0; y--)
                 {
-                    for (int x = grid.Size.Width - 1; x >= 0; x--)
+                    if (flipX)
                     {
-                        var m = grid.Get(x, y);
-                        if (m == null || m.UpdatedThisFrame) continue;
-
-                        m.Step(grid);
+                        for (int x = width - 1; x >= 0; x--)
+                        {
+                            var m = get(x, y);
+                            if (m == null || m.UpdatedThisFrame) continue;
+                            m.Step(context);
+                        }
                     }
-                }
-                else
-                {
-                    for (int x = 0; x < grid.Size.Width; x++)
+                    else
                     {
-                        var m = grid.Get(x, y);
-                        if (m == null || m.UpdatedThisFrame) continue;
-
-                        m.Step(grid);
+                        for (int x = 0; x < width; x++)
+                        {
+                            var m = get(x, y);
+                            if (m == null || m.UpdatedThisFrame) continue;
+                            m.Step(context);
+                        }
                     }
                 }
             }
+
+            if (context is IChunkedMaterialContext chunked)
+            {
+                foreach (var chunk in chunked.GetAllChunks().ToList())
+                {
+                    var (w, h) = chunk.Size;
+                    int offsetX = chunk.ChunkX * w;
+                    int offsetY = chunk.ChunkY * h;
+
+                    StepAll(w, h, (x, y) =>
+                    {
+                        var m = chunk.Grid.Get(x, y);
+                        if (m != null)
+                        {
+                            m.gridPos = new Vector2(x + offsetX, y + offsetY);
+                            m.worldPos = Utils.GridToWorld(m.gridPos);
+                        }
+                        return m;
+                    });
+                }
+            }
+            else if (context is SimulationGrid grid)
+            {
+                var (w, h) = grid.Size;
+                StepAll(w, h, grid.Get);
+            }
+
         }
+
+
+
 
         public void Render()
         {
-            for (int y = 0; y < grid.Size.Height; y++)
+            if (context is IChunkedMaterialContext chunked)
             {
-                for (int x = 0; x < grid.Size.Width; x++)
+                foreach (var chunk in chunked.GetAllChunks().ToList())
                 {
-                    var m = grid.Get(x, y);
-                    if (m == null) continue;
+                    int offsetX = chunk.ChunkX * chunk.Size.Width;
+                    int offsetY = chunk.ChunkY * chunk.Size.Height;
+                    var (width, height) = chunk.Size;
 
-                    var pos = Utils.GridToWorld(new Vector2(x, y));
-                    Raylib.DrawRectangle((int)pos.X, (int)pos.Y, Variables.PixelSize, Variables.PixelSize, m.Color);
+                    for (int y = 0; y < height; y++)
+                    {
+                        for (int x = 0; x < width; x++)
+                        {
+                            var m = chunk.Grid.Get(x, y);
+                            if (m == null) continue;
+
+                            int worldX = (offsetX + x) * Variables.PixelSize;
+                            int worldY = (offsetY + y) * Variables.PixelSize;
+
+                            Raylib.DrawRectangle(worldX, worldY, Variables.PixelSize, Variables.PixelSize, m.Color);
+                        }
+                    }
+
+                    int chunkPixelX = offsetX * Variables.PixelSize;
+                    int chunkPixelY = offsetY * Variables.PixelSize;
+                    int widthPx = width * Variables.PixelSize;
+                    int heightPx = height * Variables.PixelSize;
+
+                    Raylib.DrawRectangleLines(chunkPixelX, chunkPixelY, widthPx, heightPx, Color.Red);
                 }
             }
         }
 
+
+
         public void Explode(int cx, int cy, int radius, float force)
         {
-            var explosion = new Explosion(grid, cx, cy, radius, force);
+            var explosion = new Explosion(context, cx, cy, radius, force);
             explosion.Enact();
         }
 
@@ -81,11 +134,11 @@ namespace Ation.Simulation
                     int gx = cx + x;
                     int gy = cy + y;
                     if (x * x + y * y > radius * radius) continue;
-                    if (!grid.IsValidCell(gx, gy)) continue;
-                    if (grid.IsEmpty(gx, gy))
+                    if (!context.IsValidCell(gx, gy)) continue;
+                    if (context.IsEmpty(gx, gy))
                     {
                         var world = Utils.GridToWorld(new Vector2(gx, gy));
-                        grid.Set(gx, gy, MaterialFactory.Create(type, world));
+                        context.Set(gx, gy, MaterialFactory.Create(type, world));
                     }
                 }
             }
@@ -104,14 +157,12 @@ namespace Ation.Simulation
                     int gx = cx + x;
                     int gy = cy + y;
                     if (x * x + y * y > radius * radius) continue;
-                    if (grid.IsValidCell(gx, gy))
-                        grid.Clear(gx, gy);
+                    if (context.IsValidCell(gx, gy))
+                        context.Clear(gx, gy);
                 }
             }
         }
 
-        public int CountMaterials() => grid.Count();
+        public int CountMaterials() => context.Count();
     }
-
-    // TODO: implement chunks here
 }

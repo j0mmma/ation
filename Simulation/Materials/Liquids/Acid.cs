@@ -19,7 +19,7 @@ namespace Ation.Simulation
             Health = 1000;
         }
 
-        public override void Step(SimulationGrid grid)
+        public override void Step(IMaterialContext grid)
         {
 
 
@@ -58,22 +58,22 @@ namespace Ation.Simulation
             base.Step(grid);
         }
 
-        public bool ActOnMovableSolid(MovableSolid solid, int x, int y, SimulationGrid grid)
+        public bool ActOnMovableSolid(MovableSolid solid, int x, int y, IMaterialContext grid)
         {
             return Corrode(solid, x, y, grid);
         }
 
-        protected bool ActOnImmovableSolid(ImmovableSolid solid, int x, int y, SimulationGrid grid)
+        protected bool ActOnImmovableSolid(ImmovableSolid solid, int x, int y, IMaterialContext grid)
         {
             return Corrode(solid, x, y, grid);
         }
 
-        protected bool ActOnLiquid(Liquid liquid, int x, int y, SimulationGrid grid)
+        protected bool ActOnLiquid(Liquid liquid, int x, int y, IMaterialContext grid)
         {
             return Corrode(liquid, x, y, grid);
         }
 
-        private bool Corrode(Material target, int x, int y, SimulationGrid grid)
+        private bool Corrode(Material target, int x, int y, IMaterialContext grid)
         {
             if (target.Type is MaterialType.Wood or MaterialType.Sand or MaterialType.Water)
             {

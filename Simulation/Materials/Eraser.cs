@@ -14,7 +14,7 @@ namespace Ation.Simulation
             Color = Color.Pink;
         }
 
-        public override void Step(SimulationGrid grid)
+        public override void Step(IMaterialContext grid)
         {
             int x = (int)gridPos.X;
             int y = (int)gridPos.Y;

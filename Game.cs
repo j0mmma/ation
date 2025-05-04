@@ -7,7 +7,8 @@ namespace Ation.Game
     {
         public static void Main()
         {
-            Raylib.InitWindow(Variables.WindowWidth, Variables.WindowHeight, "Ation");
+            Raylib.InitWindow(Raylib.GetMonitorWidth(0), Raylib.GetMonitorHeight(0), "Ation");
+            Raylib.ToggleFullscreen();
             Raylib.SetTargetFPS(60);
 
             // Start with the legacy simulation scene

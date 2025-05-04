@@ -18,7 +18,7 @@ namespace Ation.Simulation
             this.Mass = 2f; // Lighter than original, falls
         }
 
-        public override void Step(SimulationGrid grid)
+        public override void Step(IMaterialContext grid)
         {
             base.Step(grid);
             // Optional: Add extra behavior like crumbling, etc.

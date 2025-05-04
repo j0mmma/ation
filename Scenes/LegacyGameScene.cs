@@ -2,12 +2,15 @@ using System.Numerics;
 using Raylib_cs;
 using Ation.Common;
 using Ation.Simulation;
+using Ation.GameWorld;
 
 namespace Ation.Game
 {
     public class LegacyGameScene : Scene
     {
-        private FallingSandSim sim;
+        private readonly World world;
+        private readonly FallingSandSim sim;
+
         private Tool selectedTool = Tool.Material;
         private MaterialType selectedMaterial = MaterialType.Sand;
 
@@ -16,6 +19,7 @@ namespace Ation.Game
         private int brushRadius = 3;
         private const int minBrushRadius = 1;
         private const int maxBrushRadius = 20;
+        private Camera2D camera;
 
         private enum Tool { Material, Wand }
 
@@ -27,21 +31,25 @@ namespace Ation.Game
             { KeyboardKey.Five, MaterialType.Acid },
             { KeyboardKey.Six, MaterialType.Smoke },
             { KeyboardKey.Seven, MaterialType.Fire },
-            { KeyboardKey.Zero, MaterialType.Eraser }, // Eraser
+            { KeyboardKey.Zero, MaterialType.Eraser },
         };
 
         public LegacyGameScene()
         {
-            int cols = Variables.WindowWidth / Variables.PixelSize;
-            int rows = Variables.WindowHeight / Variables.PixelSize;
-            sim = new FallingSandSim(cols, rows);
+            world = new World(Variables.ChunkSize);
+            sim = new FallingSandSim(world);
+
+            camera = new Camera2D
+            {
+                Target = new Vector2(Variables.ChunkSize * Variables.PixelSize / 2f, Variables.ChunkSize * Variables.PixelSize / 2f),
+                Offset = new Vector2(Raylib.GetScreenWidth() / 2f, Raylib.GetScreenHeight() / 2f),
+                Zoom = 1.0f,
+                Rotation = 0f
+            };
         }
 
         public override void ProcessInput()
         {
-            //     if (Raylib.IsKeyPressed(KeyboardKey.Zero) || Raylib.IsKeyPressed(KeyboardKey.Kp0))
-            //         selectedTool = Tool.Wand;
-
             if (Raylib.IsMouseButtonDown(MouseButton.Right))
             {
                 Vector2 mouseWorld = Raylib.GetMousePosition();
@@ -52,6 +60,11 @@ namespace Ation.Game
                 sim.Explode(x, y, radius: 15, force: 500f);
             }
 
+            float cameraSpeed = 500f * Raylib.GetFrameTime();
+            if (Raylib.IsKeyDown(KeyboardKey.W)) camera.Target.Y -= cameraSpeed;
+            if (Raylib.IsKeyDown(KeyboardKey.S)) camera.Target.Y += cameraSpeed;
+            if (Raylib.IsKeyDown(KeyboardKey.A)) camera.Target.X -= cameraSpeed;
+            if (Raylib.IsKeyDown(KeyboardKey.D)) camera.Target.X += cameraSpeed;
 
             foreach (var (key, matType) in materialBindings)
             {
@@ -110,6 +123,7 @@ namespace Ation.Game
             Raylib.DrawText($"Brush Size: {brushRadius}", 12, 85, 20, Color.Black);
             Raylib.DrawText($"FPS: {Raylib.GetFPS()}", 12, 12, 20, Color.Black);
             Raylib.DrawText($"Particles: {sim.CountMaterials()}", 12, 35, 20, Color.Black);
+            Raylib.DrawText($"Chunks: {world.ChunkCount()}", 12, 110, 20, Color.Black);
 
             Vector2 mouse = Raylib.GetMousePosition();
             Raylib.DrawCircleLines((int)mouse.X, (int)mouse.Y, brushRadius * Variables.PixelSize, Color.Red);

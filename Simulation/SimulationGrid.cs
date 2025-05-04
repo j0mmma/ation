@@ -3,7 +3,7 @@ using Ation.Common;
 
 namespace Ation.Simulation
 {
-    public class SimulationGrid
+    public class SimulationGrid : IMaterialContext
     {
         private Material?[,] grid;
         private readonly int width;

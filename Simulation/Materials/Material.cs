@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Threading.Tasks.Dataflow;
 using Ation.Common;
 using Raylib_cs;
+using Ation.GameWorld;
 
 namespace Ation.Simulation
 {
@@ -42,10 +43,10 @@ namespace Ation.Simulation
             gridPos = Utils.WorldToGrid(worldPos);
         }
 
-        public abstract void Step(SimulationGrid grid);
+        public abstract void Step(IMaterialContext ctx);
 
-        public virtual bool ActOnNeighbor(Material neighbor, int selfX, int selfY, int neighborX, int neighborY, SimulationGrid grid) => false;
-        public virtual bool TryInteract(Material other, SimulationGrid grid) => false;
+        public virtual bool ActOnNeighbor(Material neighbor, int selfX, int selfY, int neighborX, int neighborY, IMaterialContext ctx) => false;
+        public virtual bool TryInteract(Material other, IMaterialContext ctx) => false;
         public void SetActive()
         {
             UpdatedThisFrame = true;
@@ -53,6 +54,28 @@ namespace Ation.Simulation
         }
 
     }
+
+
+
+    public interface IMaterialContext
+    {
+        Material? Get(int x, int y);
+        void Set(int x, int y, Material? m);
+        void Clear(int x, int y);
+        void Swap(int x1, int y1, int x2, int y2);
+        bool IsValidCell(int x, int y);
+        bool IsEmpty(int x, int y);
+        void ResetFlags();
+        int Count();
+
+    }
+
+    public interface IChunkedMaterialContext : IMaterialContext
+    {
+        IEnumerable<Chunk> GetAllChunks();
+    }
+
+
 
     public enum MaterialClass
     {

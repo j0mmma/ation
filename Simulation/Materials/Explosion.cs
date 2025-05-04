@@ -6,13 +6,13 @@ namespace Ation.Simulation
 {
     public class Explosion
     {
-        private readonly SimulationGrid grid;
+        private readonly IMaterialContext grid;
         private readonly int centerX;
         private readonly int centerY;
         private readonly int radius;
         private readonly float force;
 
-        public Explosion(SimulationGrid grid, int centerX, int centerY, int radius, float force)
+        public Explosion(IMaterialContext grid, int centerX, int centerY, int radius, float force)
         {
             this.grid = grid;
             this.centerX = centerX;

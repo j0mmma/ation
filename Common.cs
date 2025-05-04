@@ -9,8 +9,7 @@ namespace Ation.Common
         public static int WorldWidth = WindowWidth;
         public static int WorldHeight = WindowHeight;
         public static int PixelSize = 4;
-
-
+        public static int ChunkSize = 100;
         public static float BaseGravity = 2;
     }
 

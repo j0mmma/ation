@@ -21,7 +21,7 @@ namespace Ation.Simulation
             this.carriedMaterial = carriedMaterial;
         }
 
-        public override void Step(SimulationGrid grid)
+        public override void Step(IMaterialContext grid)
         {
             float dt = Raylib.GetFrameTime();
 
@@ -56,7 +56,7 @@ namespace Ation.Simulation
             }
         }
 
-        private void TryReplaceSelf(SimulationGrid grid)
+        private void TryReplaceSelf(IMaterialContext grid)
         {
             int x = (int)gridPos.X;
             int y = (int)gridPos.Y;

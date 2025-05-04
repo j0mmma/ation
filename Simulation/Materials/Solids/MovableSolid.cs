@@ -11,7 +11,7 @@ namespace Ation.Simulation
 
         public MovableSolid(Vector2 worldPos) : base(worldPos) { }
 
-        public override void Step(SimulationGrid grid)
+        public override void Step(IMaterialContext grid)
         {
             float dt = Raylib.GetFrameTime();
 
@@ -101,7 +101,7 @@ namespace Ation.Simulation
 
 
 
-        protected virtual bool ActOnLiquid(Liquid liquid, int selfX, int selfY, int targetX, int targetY, SimulationGrid grid)
+        protected virtual bool ActOnLiquid(Liquid liquid, int selfX, int selfY, int targetX, int targetY, IMaterialContext grid)
         {
             // Direct swap with liquid
             grid.Swap(selfX, selfY, targetX, targetY);
@@ -123,7 +123,7 @@ namespace Ation.Simulation
             SetActive();
             return false;
         }
-        private bool TrySlide(SimulationGrid grid, ref int x, ref int y)
+        private bool TrySlide(IMaterialContext grid, ref int x, ref int y)
         {
             bool preferLeftFirst = Raylib.GetRandomValue(0, 1) == 0;
 

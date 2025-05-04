@@ -20,7 +20,7 @@ namespace Ation.Simulation
             Damage = 300f;
         }
 
-        public override void Step(SimulationGrid grid)
+        public override void Step(IMaterialContext grid)
         {
             UpdatedThisFrame = true;
             IsActive = false;
@@ -92,7 +92,7 @@ namespace Ation.Simulation
             worldPos = Utils.GridToWorld(gridPos);
         }
 
-        private void MarkFlammableNeighbors(SimulationGrid grid)
+        private void MarkFlammableNeighbors(IMaterialContext grid)
         {
             if (Lifetime > 0.01f) return; // Fire is still burning strong — don't spread yet
 
@@ -125,7 +125,7 @@ namespace Ation.Simulation
                 }
             }
         }
-        private bool CheckExtinguishedByWater(SimulationGrid grid)
+        private bool CheckExtinguishedByWater(IMaterialContext grid)
         {
             int x = (int)gridPos.X;
             int y = (int)gridPos.Y;
@@ -142,7 +142,7 @@ namespace Ation.Simulation
 
 
 
-        private bool TryMove(SimulationGrid grid, ref int x, ref int y, int dx, int dy)
+        private bool TryMove(IMaterialContext grid, ref int x, ref int y, int dx, int dy)
         {
             int nx = x + dx, ny = y + dy;
             if (!grid.IsValidCell(nx, ny) || !grid.IsEmpty(nx, ny)) return false;
