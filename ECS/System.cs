@@ -60,32 +60,61 @@ namespace Ation.Entities
         }
     }
 
-    public class MovementSystem : BaseSystem
+
+
+    public class MovementIntentSystem : BaseSystem
     {
-        public override string Name { get; set; } = "MovementSystem";
+        public override string Name { get; set; } = "MovementIntentSystem";
 
         public override void Update(EntityManager em, float dt, World world)
         {
             foreach (var (entity, velocity) in em.GetAll<VelocityComponent>())
             {
+                if (!em.TryGetComponent(entity, out MovementIntentComponent intent))
+                {
+                    intent = new MovementIntentComponent();
+                    em.AddComponent(entity, intent);
+                }
+
+                intent.Delta = velocity.Velocity * dt;
+            }
+        }
+    }
+
+
+
+
+    public class CollisionSystem : BaseSystem
+    {
+        public override string Name { get; set; } = "CollisionSystem";
+
+        public override void Update(EntityManager em, float dt, World world)
+        {
+            foreach (var (entity, intent) in em.GetAll<MovementIntentComponent>())
+            {
                 if (!em.TryGetComponent(entity, out PositionComponent position)) continue;
-                if (!em.TryGetComponent(entity, out SizeComponent size)) continue;
+                if (!em.TryGetComponent(entity, out VelocityComponent velocity)) continue;
+                if (!em.TryGetComponent(entity, out ColliderComponent collider)) continue;
 
                 Vector2 pos = position.Position;
-                Vector2 moveX = new Vector2(velocity.Velocity.X * dt, 0);
-                Vector2 moveY = new Vector2(0, velocity.Velocity.Y * dt);
+                Vector2 moveX = new Vector2(intent.Delta.X, 0);
+                Vector2 moveY = new Vector2(0, intent.Delta.Y);
 
-                TryMove(ref pos, moveX, ref velocity.Velocity, size.Size, world);
-                TryMove(ref pos, moveY, ref velocity.Velocity, size.Size, world);
+                TryMove(entity, ref pos, moveX, ref velocity.Velocity, collider, world, em);
+                TryMove(entity, ref pos, moveY, ref velocity.Velocity, collider, world, em);
 
                 position.Position = pos;
             }
         }
 
-        private void TryMove(ref Vector2 pos, Vector2 delta, ref Vector2 velocity, Vector2 size, World world)
+        private void TryMove(Entity entity, ref Vector2 pos, Vector2 delta, ref Vector2 velocity, ColliderComponent collider, World world, EntityManager em)
         {
             Vector2 newPos = pos + delta;
-            if (!CollidesAt(newPos, size, world))
+
+            bool hitsWorld = CollidesWithWorld(newPos + collider.Offset, collider.Size, world);
+            bool hitsEntities = CollidesWithEntities(entity, newPos + collider.Offset, collider.Size, em);
+
+            if (!hitsWorld && !hitsEntities)
             {
                 pos = newPos;
             }
@@ -96,7 +125,7 @@ namespace Ation.Entities
             }
         }
 
-        private bool CollidesAt(Vector2 pos, Vector2 size, World world)
+        private bool CollidesWithWorld(Vector2 pos, Vector2 size, World world)
         {
             int minX = (int)MathF.Floor(pos.X);
             int maxX = (int)MathF.Floor(pos.X + size.X);
@@ -113,5 +142,29 @@ namespace Ation.Entities
 
             return false;
         }
+
+        private bool CollidesWithEntities(Entity self, Vector2 pos, Vector2 size, EntityManager em)
+        {
+            foreach (var (other, otherCollider) in em.GetAll<ColliderComponent>())
+            {
+                if (other.Id == self.Id) continue;
+                if (!em.TryGetComponent(other, out PositionComponent otherPos)) continue;
+
+                var aMin = pos;
+                var aMax = pos + size;
+                var bMin = otherPos.Position + otherCollider.Offset;
+                var bMax = bMin + otherCollider.Size;
+
+                bool overlap = !(aMax.X <= bMin.X || aMin.X >= bMax.X ||
+                                 aMax.Y <= bMin.Y || aMin.Y >= bMax.Y);
+
+                if (overlap) return true;
+            }
+
+            return false;
+        }
     }
+
 }
+
+

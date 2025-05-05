@@ -36,12 +36,24 @@ namespace Ation.Entities
         public Entity CreatePlayer(Vector2 startPos)
         {
             var player = CreateEntity();
+            var size = new Vector2(Variables.PixelSize * 2, Variables.PixelSize * 3);
+
             AddComponent(player, new PositionComponent(startPos));
             AddComponent(player, new VelocityComponent(Vector2.Zero));
-            AddComponent(player, new SizeComponent(new Vector2(Variables.PixelSize * 2, Variables.PixelSize * 3)));
+            AddComponent(player, new SizeComponent(size));
+            AddComponent(player, new ColliderComponent(size)); // matches SizeComponent
             AddComponent(player, new GravityComponent(150f));
             AddComponent(player, new PlayerInputComponent());
+
             return player;
+        }
+        public Entity CreateStaticBlock(Vector2 position, Vector2 size)
+        {
+            var entity = CreateEntity();
+            AddComponent(entity, new PositionComponent(position));
+            AddComponent(entity, new SizeComponent(size));
+            AddComponent(entity, new ColliderComponent(size));
+            return entity;
         }
 
         public void DestroyEntity(Entity entity)

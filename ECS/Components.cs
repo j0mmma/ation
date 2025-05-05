@@ -26,3 +26,20 @@ public class GravityComponent : Component
     public float Gravity;
     public GravityComponent(float gravity) => Gravity = gravity;
 }
+public class ColliderComponent : Component
+{
+    public Vector2 Size;
+    public Vector2 Offset;
+
+    public ColliderComponent(Vector2 size, Vector2 offset = default)
+    {
+        Size = size;
+        Offset = offset;
+    }
+
+
+}
+public class MovementIntentComponent : Component
+{
+    public Vector2 Delta;
+}

@@ -45,12 +45,18 @@ namespace Ation.Game
             entityManager = new EntityManager();
             playerEntity = entityManager.CreatePlayer(new Vector2(0, 0));
 
+            var blockPos = new Vector2(50, 80); // adjust as needed
+            var blockSize = new Vector2(20, 20); // in world units
+            entityManager.CreateStaticBlock(blockPos, blockSize);
+
             systems = new List<BaseSystem>
             {
                 new PlayerInputSystem(),
                 new GravitySystem(),
-                new MovementSystem()
+                new MovementIntentSystem(), // NEW
+                new CollisionSystem()       // FINAL resolver
             };
+
 
             world = new World(Variables.ChunkSize);
             sim = new FallingSandSim(world);
