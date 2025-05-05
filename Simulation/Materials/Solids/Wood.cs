@@ -178,9 +178,9 @@ namespace Ation.Simulation
                     }
 
                     if (Raylib.GetRandomValue(0, 100) < 60)
-                        grid.Set((int)gridPos.X, (int)gridPos.Y, new Smoke(Utils.GridToWorld(gridPos), 0.4f, 1.2f));
+                        //grid.Set((int)gridPos.X, (int)gridPos.Y, new Smoke(Utils.GridToWorld(gridPos), 0.4f, 1.2f));
 
-                    break;
+                        break;
                 }
             }
 

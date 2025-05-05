@@ -3,11 +3,13 @@ using Raylib_cs;
 using Ation.Common;
 using Ation.Simulation;
 using Ation.GameWorld;
+using Ation.Entities;
 
 namespace Ation.Game
 {
     public class LegacyGameScene : Scene
     {
+        private int levelCounter = 0;
         private readonly World world;
         private readonly FallingSandSim sim;
 
@@ -20,6 +22,10 @@ namespace Ation.Game
         private const int minBrushRadius = 1;
         private const int maxBrushRadius = 20;
         private Camera2D camera;
+        private readonly EntityManager entityManager;
+        private readonly List<BaseSystem> systems;
+        private Entity playerEntity;
+
 
         private enum Tool { Material, Wand }
 
@@ -36,6 +42,16 @@ namespace Ation.Game
 
         public LegacyGameScene()
         {
+            entityManager = new EntityManager();
+            playerEntity = entityManager.CreatePlayer(new Vector2(0, 0));
+
+            systems = new List<BaseSystem>
+            {
+                new PlayerInputSystem(),
+                new GravitySystem(),
+                new MovementSystem()
+            };
+
             world = new World(Variables.ChunkSize);
             sim = new FallingSandSim(world);
 
@@ -46,10 +62,21 @@ namespace Ation.Game
                 Zoom = 1.0f,
                 Rotation = 0f
             };
+            LevelIO.Load("Assets/test_level.json", world);
         }
 
         public override void ProcessInput()
         {
+            if (Raylib.IsKeyPressed(KeyboardKey.F5))
+                LevelIO.Save($"Assets/save_{levelCounter++}.json", world);
+
+            if (Raylib.IsKeyPressed(KeyboardKey.F9))
+            {
+                world.chunks.Clear();
+                LevelIO.Load("Assets/test_level.json", world);
+            }
+
+
             Vector2 mouseScreen = Raylib.GetMousePosition();
             Vector2 mouseWorld = Raylib.GetScreenToWorld2D(mouseScreen, camera);
 
@@ -115,6 +142,9 @@ namespace Ation.Game
         {
             sim.Update(dt);
             world.RemoveEmptyChunks();
+            foreach (var system in systems)
+                system.Update(entityManager, dt, world);
+
         }
 
         public override void Render()
@@ -132,6 +162,20 @@ namespace Ation.Game
 
             Raylib.DrawRectangleLines(topLeftX, topLeftY, totalSizePx, totalSizePx, Color.Green);
 
+            foreach (var (entity, position) in entityManager.GetAll<PositionComponent>())
+            {
+                if (!entityManager.TryGetComponent(entity, out SizeComponent size)) continue;
+
+                Raylib.DrawRectangle(
+                    (int)(position.Position.X * Variables.PixelSize),
+                    (int)(position.Position.Y * Variables.PixelSize),
+                    (int)(size.Size.X * Variables.PixelSize),
+                    (int)(size.Size.Y * Variables.PixelSize),
+                    Color.Red
+                );
+            }
+
+
             Raylib.EndMode2D();
 
             Raylib.DrawText($"Material: {selectedMaterial}", 12, 60, 20, Color.Black);
@@ -143,6 +187,14 @@ namespace Ation.Game
 
             Vector2 mouse = Raylib.GetMousePosition();
             Raylib.DrawCircleLines((int)mouse.X, (int)mouse.Y, brushRadius * Variables.PixelSize, Color.Red);
+
+            Vector2 mouseScreen = Raylib.GetMousePosition();
+            Vector2 mouseWorld = Raylib.GetScreenToWorld2D(mouseScreen, camera);
+            int gridX = (int)(mouseWorld.X / Variables.PixelSize);
+            int gridY = (int)(mouseWorld.Y / Variables.PixelSize);
+
+            Raylib.DrawText($"X:{gridX} Y:{gridY}", (int)mouseScreen.X + 12, (int)mouseScreen.Y + 12, 16, Color.DarkGray);
+
         }
 
 

@@ -8,7 +8,7 @@ namespace Ation.GameWorld
     public class World : IChunkedMaterialContext
     {
         private readonly int chunkSize;
-        private readonly Dictionary<(int, int), Chunk> chunks = new();
+        public readonly Dictionary<(int, int), Chunk> chunks = new();
         public readonly int maxWorldSize = 2; // Maximum number of chunks in each direction
 
 
@@ -19,10 +19,6 @@ namespace Ation.GameWorld
             // Manually create chunk at (0,0)
             var chunk00 = new Chunk(0, 0, chunkSize);
             chunks[(0, 0)] = chunk00;
-
-            // Manually create chunk at (1,0)
-            var chunk10 = new Chunk(1, 0, chunkSize);
-            chunks[(1, 0)] = chunk10;
         }
 
 
@@ -116,6 +112,27 @@ namespace Ation.GameWorld
         }
 
 
+        private (Chunk? chunk, int localX, int localY) GetChunkAndLocalCoords(int worldX, int worldY)
+        {
+            int chunkX = Math.DivRem(worldX, chunkSize, out int localX);
+            int chunkY = Math.DivRem(worldY, chunkSize, out int localY);
+            if (localX < 0) { chunkX--; localX += chunkSize; }
+            if (localY < 0) { chunkY--; localY += chunkSize; }
+
+            var key = (chunkX, chunkY);
+            chunks.TryGetValue(key, out var chunk);
+            return (chunk, localX, localY);
+        }
+
+        public bool IsCollidableAt(int worldX, int worldY)
+        {
+            var (chunk, localX, localY) = GetChunkAndLocalCoords(worldX, worldY);
+            if (chunk == null || !chunk.Grid.IsValidCell(localX, localY))
+                return false;
+
+            var material = chunk.Grid.Get(localX, localY);
+            return material != null && material.IsCollidable;
+        }
 
         public IEnumerable<Chunk> GetAllChunks()
         {
