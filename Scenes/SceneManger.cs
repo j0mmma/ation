@@ -17,7 +17,12 @@ namespace Ation.Game
                 scenes.Pop();
         }
 
-        public static Scene CurrentScene => scenes.Count > 0 ? scenes.Peek() : null;
+        public static Scene CurrentScene => scenes.Count > 0
+            ? scenes.Peek()
+            : throw new InvalidOperationException("No scenes on the stack.");
+
+
+
 
         public static void Update(float dt)
         {

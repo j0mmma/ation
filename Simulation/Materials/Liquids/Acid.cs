@@ -14,7 +14,7 @@ namespace Ation.Simulation
         public Acid(Vector2 worldPos) : base(worldPos)
         {
             Color = new Color(0, 255, 0, 255);
-            Mass = 1.0f;
+            Mass = 0.9f;
             Damage = 50f;
             Health = 1000;
         }

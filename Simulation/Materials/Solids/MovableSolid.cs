@@ -120,7 +120,6 @@ namespace Ation.Simulation
         protected virtual bool ActOnImmovableSolid(ImmovableSolid solid)
         {
             // Touching immovable → turn red
-            this.Color = Color.Red;
             SetActive();
             return false;
         }

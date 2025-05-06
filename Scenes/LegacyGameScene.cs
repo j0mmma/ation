@@ -35,8 +35,10 @@ namespace Ation.Game
             { KeyboardKey.Two, MaterialType.Water },
             { KeyboardKey.Three, MaterialType.Wood },
             { KeyboardKey.Five, MaterialType.Acid },
-            { KeyboardKey.Six, MaterialType.Smoke },
+            { KeyboardKey.Six, MaterialType.Steam },
             { KeyboardKey.Seven, MaterialType.Fire },
+            { KeyboardKey.Eight, MaterialType.Stone },
+            { KeyboardKey.Nine, MaterialType.Lava },
             { KeyboardKey.Zero, MaterialType.Eraser },
         };
 
@@ -92,7 +94,7 @@ namespace Ation.Game
                 int x = (int)gridPos.X;
                 int y = (int)gridPos.Y;
 
-                sim.Explode(x, y, radius: 15, force: 500f);
+                sim.Explode(x, y, radius: 15, force: 400f);
             }
 
             float cameraSpeed = 800f * Raylib.GetFrameTime();
@@ -159,6 +161,7 @@ namespace Ation.Game
             Raylib.BeginMode2D(camera);
 
             sim.Render(renderableChunks);
+
             int sizePx = Variables.ChunkSize * Variables.PixelSize;
             int totalChunks = world.maxWorldSize * 2 + 1;
             int totalSizePx = totalChunks * sizePx;
@@ -190,7 +193,7 @@ namespace Ation.Game
             Raylib.DrawText($"Particles: {sim.CountMaterials()}", 12, 35, 20, Color.Black);
             Raylib.DrawText($"Chunks: {world.ChunkCount()}", 12, 110, 20, Color.Black);
             Raylib.DrawText($"Renderable chunks: {renderableChunks.Count()}", 12, 130, 20, Color.Black);
-
+            DrawMaterialSelectorHUD();
             Vector2 mouse = Raylib.GetMousePosition();
             Raylib.DrawCircleLines((int)mouse.X, (int)mouse.Y, brushRadius * Variables.PixelSize, Color.Red);
 
@@ -203,6 +206,40 @@ namespace Ation.Game
 
         }
 
+        private void DrawMaterialSelectorHUD()
+        {
+            int buttonWidth = 160;
+            int buttonHeight = 28;
+            int padding = 6;
+            int startX = Raylib.GetScreenWidth() - buttonWidth - 20;
+            int startY = 20;
+
+            int i = 0;
+            foreach (MaterialType type in Enum.GetValues(typeof(MaterialType)))
+            {
+                int x = startX;
+                int y = startY + i * (buttonHeight + padding);
+                Rectangle rect = new Rectangle(x, y, buttonWidth, buttonHeight);
+
+                bool hovered = Raylib.CheckCollisionPointRec(Raylib.GetMousePosition(), rect);
+                bool clicked = hovered && Raylib.IsMouseButtonPressed(MouseButton.Left);
+
+                Color bgColor = type == selectedMaterial ? Color.Green :
+                                hovered ? Color.Blue : Color.Gray;
+
+                Raylib.DrawRectangleRec(rect, bgColor);
+                Raylib.DrawRectangleLinesEx(rect, 2, Color.Black);
+                Raylib.DrawText(type.ToString(), x + 8, y + 6, 16, Color.Black);
+
+                if (clicked)
+                {
+                    selectedMaterial = type;
+                    selectedTool = Tool.Material;
+                }
+
+                i++;
+            }
+        }
 
         private List<Chunk> GetRenderableChunks()
         {

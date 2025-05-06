@@ -93,10 +93,13 @@ namespace Ation.Simulation
     {
         Sand,
         Water,
+        Lava,
         Acid,
         Smoke,
+        Steam,
         AcidVapor,
         Wood,
+        Stone,
         Fire,
         Eraser,
         Empty,
@@ -112,8 +115,11 @@ namespace Ation.Simulation
         {
             { MaterialType.Sand, pos => new Sand(pos) },
             { MaterialType.Water, pos => new Water(pos) },
+            { MaterialType.Lava, pos => new Lava(pos) },
             { MaterialType.Wood, pos => new Wood(pos) },
+            { MaterialType.Stone, pos => new Stone(pos) },
             { MaterialType.Smoke, pos => new Smoke(pos) },
+            { MaterialType.Steam, pos => new Steam(pos) },
             { MaterialType.Eraser, pos => new Eraser(pos) },
             { MaterialType.Fire, pos => new Fire(pos) },
             { MaterialType.Acid, pos => new Acid(pos) },
@@ -133,9 +139,12 @@ namespace Ation.Simulation
         {
             MaterialType.Sand => MaterialClass.MovableSolid,
             MaterialType.Water => MaterialClass.Liquid,
+            MaterialType.Lava => MaterialClass.Liquid,
             MaterialType.Acid => MaterialClass.Liquid,
             MaterialType.Smoke => MaterialClass.Gas,
+            MaterialType.Steam => MaterialClass.Gas,
             MaterialType.Wood => MaterialClass.ImmovableSolid,
+            MaterialType.Stone => MaterialClass.ImmovableSolid,
             MaterialType.Eraser => MaterialClass.Eraser,
             MaterialType.Empty => MaterialClass.Empty,
             _ => throw new ArgumentOutOfRangeException(nameof(type))

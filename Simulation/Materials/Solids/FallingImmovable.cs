@@ -12,13 +12,20 @@ namespace Ation.Simulation
         public override MaterialType Type => MaterialType.FallingImmovable;
 
         public FallingImmovable(Material source)
-            : base(source.worldPos)
+    : base(source.worldPos)
         {
-            this.Color = source.Color;
+            this.Color = new Color(
+                (byte)(source.Color.R * 0.6f),
+                (byte)(source.Color.G * 0.6f),
+                (byte)(source.Color.B * 0.6f),
+                source.Color.A
+            );
+
             this.Health = source.Health;
             this.Flammability = source.Flammability;
-            this.Mass = 2f; // Lighter than original, falls
+            this.Mass = 2f;
         }
+
 
         public override void Step(IMaterialContext grid)
         {

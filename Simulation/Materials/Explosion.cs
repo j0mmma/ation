@@ -11,6 +11,7 @@ namespace Ation.Simulation
         private readonly int centerY;
         private readonly int radius;
         private readonly float force;
+        private readonly float damage = 150;
 
         public Explosion(IMaterialContext grid, int centerX, int centerY, int radius, float force)
         {
@@ -34,9 +35,7 @@ namespace Ation.Simulation
                     int dx = x - centerX;
                     int dy = y - centerY;
                     int distSq = dx * dx + dy * dy;
-
-                    if (distSq > sqrRadius)
-                        continue;
+                    if (distSq > sqrRadius) continue;
 
                     float dist = MathF.Sqrt(distSq);
                     float falloff = 1f - (dist / radius);
@@ -45,11 +44,23 @@ namespace Ation.Simulation
                     Vector2 impulse = dir * (force * falloff) + new Vector2(0, -force * 1.2f);
 
                     var current = grid.Get(x, y);
-
-                    // Launch real material if present
                     if (current != null && !(current is Gas) && !(current is Particle))
                     {
+                        float resistance = current.ExplosionResistance;
 
+                        if (resistance < 1f && current.Health.HasValue)
+                        {
+                            float dealt = damage * falloff * (1f - resistance);
+                            current.Health -= dealt;
+
+                            if (current.Health <= 0)
+                            {
+                                grid.Set(x, y, new Smoke(Utils.GridToWorld(new Vector2(x, y)), 0.3f, 1.5f));
+                                continue;
+                            }
+                        }
+
+                        // Always spawn flying particle (even if resistant)
                         var flying = new Particle(
                             Utils.GridToWorld(new Vector2(x, y)),
                             impulse,
@@ -57,9 +68,9 @@ namespace Ation.Simulation
                             current
                         );
                         grid.Set(x, y, flying);
+
                     }
-                    // Otherwise maybe spawn smoke
-                    if (Raylib.GetRandomValue(0, 100) < 40)
+                    else if (Raylib.GetRandomValue(0, 100) < 40)
                     {
                         var smoke = new Smoke(Utils.GridToWorld(new Vector2(x, y)));
                         grid.Set(x, y, smoke);
@@ -67,6 +78,5 @@ namespace Ation.Simulation
                 }
             }
         }
-
     }
 }
