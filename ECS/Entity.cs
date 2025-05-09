@@ -11,16 +11,15 @@ namespace Ation.Entities
     public class Entity
     {
         public int Id { get; }
-        public string DisplayName { get; set; }
 
-        internal Entity(int id, string displayName = "")
+        internal Entity(int id)
         {
             Id = id;
-            DisplayName = string.IsNullOrEmpty(displayName) ? $"Entity({id})" : displayName;
         }
 
         public override int GetHashCode() => Id;
     }
+
 
     public class EntityManager
     {
@@ -47,6 +46,8 @@ namespace Ation.Entities
             var gravity = new GravityComponent(500f);
             var input = new PlayerInputComponent();
             var state = new StateComponent();
+            var inventory = new InventoryComponent();
+
             Texture2D texture = Raylib.LoadTexture("Assets/Sprites/Wanderer Magican/Idle.png");
             Rectangle source = new Rectangle(0, 0, 128, 128);
 
@@ -66,6 +67,7 @@ namespace Ation.Entities
             AddComponent(player, input);
             AddComponent(player, collider);
             AddComponent(player, renderable);
+            AddComponent(player, inventory);
 
             return player;
         }
@@ -87,29 +89,36 @@ namespace Ation.Entities
             var baseColliderSize = new Vector2(48 / Variables.PixelSize, 48 / Variables.PixelSize);
             var colliderSize = baseColliderSize * scale;
             var transform = new TransformComponent(position);
-            var gravity = new GravityComponent(300f);
             var velocity = new VelocityComponent(Vector2.Zero);
+            var gravity = new GravityComponent(300f);
 
             Texture2D texture = Raylib.LoadTexture("Assets/Sprites/rpg_icons/spritesheet/spritesheet_48x48.png");
             Rectangle source = new Rectangle(0, 0, 48, 48);
 
-
             var colliderOffset = new Vector2(-colliderSize.X / 2f, -colliderSize.Y); // from feet
-            var renderableOffset = Vector2.Zero; // origin handled by DrawTexturePro
+            var renderableOffset = Vector2.Zero;
 
-            var collider = new ColliderComponent(colliderSize, colliderOffset);
+            var collider = new ColliderComponent(colliderSize, colliderOffset, CollisionType.Passive);
+
             var renderable = new RenderableComponent(texture, source, renderableOffset, scale);
 
-
-            // Add components
+            // Add core components
+            AddComponent(item, new StateComponent());
             AddComponent(item, transform);
             AddComponent(item, velocity);
             AddComponent(item, gravity);
             AddComponent(item, collider);
             AddComponent(item, renderable);
 
+            // Add pickup behavior
+            AddComponent(item, new PickupableComponent());
+            AddComponent(item, new ItemComponent());
+            AddComponent(item, new DropCooldownComponent());
+
             return item;
         }
+
+
 
         public void DestroyEntity(Entity entity)
         {
@@ -167,4 +176,32 @@ namespace Ation.Entities
 
     }
 
+
+    public static class ProjectileFactory
+    {
+        public static Entity CreateFireball(EntityManager em, Vector2 position, Vector2 direction)
+        {
+            var projectile = em.CreateEntity();
+
+            // Dummy visual
+            Texture2D texture = Raylib.LoadTexture("Assets/Spells/fireball.png"); // Make sure this exists
+            Rectangle sprite = new Rectangle(0, 0, 16, 16);
+
+            em.AddComponent(projectile, new TransformComponent(position));
+            em.AddComponent(projectile, new VelocityComponent(direction * 150f));
+            em.AddComponent(projectile, new ColliderComponent(new Vector2(6, 6)));
+            em.AddComponent(projectile, new RenderableComponent(texture, sprite));
+            // em.AddComponent(projectile, new ProjectileComponent
+            // {
+            //     Damage = 20f,
+            //     Owner = default,
+            //     ExplodesOnImpact = false,
+            //     InteractsWithGeometry = true
+            // });
+
+            return projectile;
+        }
+    }
 }
+
+

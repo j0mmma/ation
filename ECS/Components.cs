@@ -33,27 +33,38 @@ public class GravityComponent : Component
     public float Gravity;
     public GravityComponent(float gravity) => Gravity = gravity;
 }
+
+
+
+public enum CollisionType
+{
+    None,       // ignored
+    Passive,    // collides with world but doesn't block entities
+    Solid       // blocks movement (e.g., player, walls)
+}
+
 public class ColliderComponent : Component
 {
     public Vector2 Size;
     public Vector2 Offset;
     public bool IsGrounded;
     public bool IsInLiquid;
+    public CollisionType CollisionType;
 
-
-    public ColliderComponent(Vector2 size, Vector2 offset = default)
+    public ColliderComponent(Vector2 size, Vector2 offset = default, CollisionType type = CollisionType.Solid)
     {
         Size = size;
         Offset = offset;
+        CollisionType = type;
     }
 
-
 }
+
+
 public class MovementIntentComponent : Component
 {
     public Vector2 Delta;
 }
-
 
 
 public class RenderableComponent : Component
@@ -84,3 +95,36 @@ public class StateComponent : Component
     public float FireDuration = 0f;
 }
 
+public class ItemComponent : Component
+{
+    public Action<EntityManager, Entity, Entity, Vector2, Vector2>? UseAction { get; }
+
+    public ItemComponent(Action<EntityManager, Entity, Entity, Vector2, Vector2>? useAction = null)
+    {
+        Name = "item";
+        UseAction = useAction;
+    }
+}
+
+public class PickupableComponent : Component
+{
+    public PickupableComponent()
+    {
+        Name = "pickupable";
+    }
+}
+
+public class InventoryComponent : Component
+{
+    public Entity?[] Slots = new Entity?[3];
+    public int SelectedIndex = 0;
+}
+public class DropCooldownComponent : Component
+{
+    public float TimeRemaining;
+
+    public DropCooldownComponent(float duration = 1f)
+    {
+        TimeRemaining = duration;
+    }
+}

@@ -29,7 +29,7 @@ public class Renderer
         if (DebugDrawPositions) DrawEntityPositions();
         if (DebugDrawHealthBars) DrawHealthBars();
 
-        DrawHUD(); // Always drawn
+        //DrawHUD(); // Always drawn
     }
 
     private void DrawSprites()
@@ -96,7 +96,7 @@ public class Renderer
         // If you add HealthComponent later
     }
 
-    private void DrawHUD()
+    private void RenderHUD()
     {
         // HUD elements like brush size, material, FPS, etc.
     }
@@ -150,4 +150,3 @@ public static class TextureManager
 
     public static SpriteSheet GetSheet(string name) => sheets[name];
 }
-

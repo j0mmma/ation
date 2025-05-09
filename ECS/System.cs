@@ -39,6 +39,55 @@ namespace Ation.Entities
                     else if (collider.IsGrounded)
                         velocity.Velocity.Y = JumpVelocity;
                 }
+
+                if (Raylib.IsKeyPressed(KeyboardKey.One))
+                {
+                    if (em.TryGetComponent(entity, out InventoryComponent inventory))
+                        inventory.SelectedIndex = 0;
+                }
+
+                if (Raylib.IsKeyPressed(KeyboardKey.Two))
+                {
+                    if (em.TryGetComponent(entity, out InventoryComponent inventory))
+                        inventory.SelectedIndex = 1;
+                }
+                if (Raylib.IsKeyPressed(KeyboardKey.Three))
+                {
+                    if (em.TryGetComponent(entity, out InventoryComponent inventory))
+                        inventory.SelectedIndex = 2;
+                }
+                if (Raylib.IsKeyPressed(KeyboardKey.Q))
+                {
+                    if (em.TryGetComponent(entity, out InventoryComponent inventory))
+                    {
+                        int index = inventory.SelectedIndex;
+                        var item = inventory.Slots[index];
+                        if (item != null)
+                        {
+                            inventory.Slots[index] = null;
+
+                            // Drop position: just below the player's feet
+                            Vector2 dropPos = position.Position + new Vector2(0, -0.5f);
+
+                            // Re-enable world components
+                            em.AddComponent(item, new PickupableComponent());
+                            em.AddComponent(item, new DropCooldownComponent(0.5f)); // Half second pickup delay
+                            em.AddComponent(item, new ColliderComponent(
+                                new Vector2(1, 1),                         // Default size
+                                new Vector2(-0.5f, -1f),                   // Offset from center-bottom
+                                CollisionType.Passive));                  // Doesn’t block movement
+                            em.AddComponent(item, new GravityComponent(300f));
+                            em.AddComponent(item, new VelocityComponent(Vector2.Zero));
+
+                            if (em.TryGetComponent(item, out TransformComponent t))
+                                t.Position = dropPos;
+                            else
+                                em.AddComponent(item, new TransformComponent(dropPos));
+                        }
+                    }
+                }
+
+
             }
         }
 
@@ -171,6 +220,7 @@ namespace Ation.Entities
             foreach (var (other, otherCollider) in em.GetAll<ColliderComponent>())
             {
                 if (other.Id == self.Id) continue;
+                if (otherCollider.CollisionType != CollisionType.Solid) continue;
                 if (!em.TryGetComponent(other, out TransformComponent otherPos)) continue;
 
                 var aMin = pos;
@@ -186,6 +236,7 @@ namespace Ation.Entities
 
             return false;
         }
+
         private bool CheckGrounded(Vector2 pos, ColliderComponent collider, World world)
         {
             float startX = pos.X + collider.Offset.X;
@@ -281,6 +332,69 @@ namespace Ation.Entities
             }
         }
     }
+
+
+    public class PickupSystem : BaseSystem
+    {
+        public override string Name { get; set; } = "PickupSystem";
+
+        public override void Update(EntityManager em, float dt, World world)
+        {
+            foreach (var (player, _) in em.GetAll<PlayerInputComponent>())
+            {
+                if (!em.TryGetComponent(player, out ColliderComponent playerCol) ||
+                    !em.TryGetComponent(player, out TransformComponent playerPos) ||
+                    !em.TryGetComponent(player, out InventoryComponent inventory))
+                    continue;
+
+                var playerMin = playerPos.Position + playerCol.Offset;
+                var playerMax = playerMin + playerCol.Size;
+
+                foreach (var (item, _) in em.GetAll<PickupableComponent>())
+                {
+                    // Handle drop cooldown
+                    if (em.TryGetComponent(item, out DropCooldownComponent cooldown))
+                    {
+                        cooldown.TimeRemaining -= dt;
+                        if (cooldown.TimeRemaining > 0) continue;
+                        em.RemoveComponent<DropCooldownComponent>(item);
+                    }
+
+                    if (!em.TryGetComponent(item, out ColliderComponent itemCol) ||
+                        !em.TryGetComponent(item, out TransformComponent itemPos))
+                        continue;
+
+                    var itemMin = itemPos.Position + itemCol.Offset;
+                    var itemMax = itemMin + itemCol.Size;
+
+                    bool overlaps = !(playerMax.X <= itemMin.X || playerMin.X >= itemMax.X ||
+                                      playerMax.Y <= itemMin.Y || playerMin.Y >= itemMax.Y);
+
+                    if (!overlaps) continue;
+
+                    for (int i = 0; i < inventory.Slots.Length; i++)
+                    {
+                        if (inventory.Slots[i] == null)
+                        {
+                            inventory.Slots[i] = item;
+
+                            // Remove from world, keep alive
+                            em.RemoveComponent<PickupableComponent>(item);
+                            em.RemoveComponent<ColliderComponent>(item);
+                            em.RemoveComponent<TransformComponent>(item);
+                            em.RemoveComponent<VelocityComponent>(item);
+                            em.RemoveComponent<GravityComponent>(item);
+
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+
 
 }
 

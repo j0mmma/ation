@@ -29,14 +29,19 @@ namespace Ation.Game
         {
             entityManager = new EntityManager();
             playerEntity = entityManager.CreatePlayer(new Vector2(-15, 0));
-            var item = entityManager.CreateItem(new Vector2(15, -10));
+            var item = entityManager.CreateItem(new Vector2(-30, -10));
+
+
+
+
             systems = new List<BaseSystem>
             {
                 new StateSystem(),
                 new PlayerInputSystem(),
                 new GravitySystem(),
                 new MovementIntentSystem(),
-                new CollisionSystem()
+                new CollisionSystem(),
+                new PickupSystem()
             };
 
 
@@ -50,9 +55,8 @@ namespace Ation.Game
                 Zoom = 1.0f,
                 Rotation = 0f
             };
-            //DungeonGenerator.GenerateAndSave("Assets/test_level.json", Variables.ChunkSize, world.maxWorldSize);
+
             LevelIO.Load("Assets/test_level_old.json", world);
-            //LevelIO.Load("Assets/test_level.json", world);
             renderer = new Renderer(entityManager, world);
 
         }
@@ -71,31 +75,6 @@ namespace Ation.Game
 
             Vector2 mouseScreen = Raylib.GetMousePosition();
             Vector2 mouseWorld = Raylib.GetScreenToWorld2D(mouseScreen, camera);
-
-            // if (Raylib.IsMouseButtonDown(MouseButton.Right))
-            // {
-            //     Vector2 gridPos = Utils.WorldToGrid(mouseWorld);
-            //     int x = (int)gridPos.X;
-            //     int y = (int)gridPos.Y;
-
-            //     sim.Explode(x, y, radius: 15, force: 400f);
-            // }
-
-            // if (Raylib.IsMouseButtonDown(MouseButton.Left) && selectedTool == Tool.Material)
-            // {
-            //     float distance = Vector2.Distance(previousMousePos, mouseWorld);
-            //     int steps = Math.Max(1, (int)(distance / (Variables.PixelSize / 2)));
-
-            //     for (int i = 0; i <= steps; i++)
-            //     {
-            //         Vector2 pos = Vector2.Lerp(previousMousePos, mouseWorld, (float)i / steps);
-
-            //         if (selectedMaterial == MaterialType.Empty)
-            //             sim.ClearMaterials(pos, brushRadius);
-            //         else
-            //             sim.AddMaterial(pos, selectedMaterial, brushRadius);
-            //     }
-            // }
 
         }
 
@@ -144,6 +123,22 @@ namespace Ation.Game
                 Raylib.DrawText($"FireTime: {state.FireDuration:0.00}", 12, y, 20, Color.DarkGray);
             }
 
+            if (entityManager.TryGetComponent(playerEntity, out InventoryComponent inventory))
+            {
+                int y = 260;
+                Raylib.DrawText("Inventory:", 12, y, 20, Color.DarkGray);
+                y += 22;
+
+                for (int i = 0; i < inventory.Slots.Length; i++)
+                {
+                    var item = inventory.Slots[i];
+                    string itemText = item != null ? $"item_{item.Id}" : "(empty)";
+                    Color color = i == inventory.SelectedIndex ? Color.Yellow : Color.Gray;
+
+                    Raylib.DrawText($"[{i}] {itemText}", 12, y, 20, color);
+                    y += 20;
+                }
+            }
 
 
             Vector2 mouse = Raylib.GetMousePosition();
@@ -189,6 +184,9 @@ namespace Ation.Game
 
             return result;
         }
+
+
+
 
 
 
