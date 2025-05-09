@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Raylib_cs;
 
 using Ation.Common;
 
@@ -36,24 +37,76 @@ namespace Ation.Entities
         public Entity CreatePlayer(Vector2 startPos)
         {
             var player = CreateEntity();
-            var size = new Vector2(Variables.PixelSize * 2, Variables.PixelSize * 3);
 
-            AddComponent(player, new PositionComponent(startPos));
-            AddComponent(player, new VelocityComponent(Vector2.Zero));
-            AddComponent(player, new SizeComponent(size));
-            AddComponent(player, new ColliderComponent(size)); // matches SizeComponent
-            AddComponent(player, new GravityComponent(150f));
-            AddComponent(player, new PlayerInputComponent());
+            float scale = 1.3f;
+            var baseColliderSize = new Vector2(10, 16);
+            var colliderSize = baseColliderSize * scale;
+            var transform = new TransformComponent(startPos);
+            var velocity = new VelocityComponent(Vector2.Zero);
+            var gravity = new GravityComponent(300f);
+            var input = new PlayerInputComponent();
+
+            Texture2D texture = Raylib.LoadTexture("Assets/Sprites/Wanderer Magican/Idle.png");
+            Rectangle source = new Rectangle(0, 0, 128, 128);
+
+
+            var colliderOffset = new Vector2(-colliderSize.X / 2f, -colliderSize.Y); // from feet
+            var renderableOffset = Vector2.Zero; // origin handled by DrawTexturePro
+
+            var collider = new ColliderComponent(colliderSize, colliderOffset);
+            var renderable = new RenderableComponent(texture, source, renderableOffset, scale);
+
+
+            // Add components
+            AddComponent(player, transform);
+            AddComponent(player, velocity);
+            AddComponent(player, gravity);
+            AddComponent(player, input);
+            AddComponent(player, collider);
+            AddComponent(player, renderable);
 
             return player;
         }
+
+
         public Entity CreateStaticBlock(Vector2 position, Vector2 size)
         {
             var entity = CreateEntity();
-            AddComponent(entity, new PositionComponent(position));
-            AddComponent(entity, new SizeComponent(size));
+            AddComponent(entity, new TransformComponent(position));
             AddComponent(entity, new ColliderComponent(size));
             return entity;
+        }
+
+        public Entity CreateItem(Vector2 position)
+        {
+            var item = CreateEntity();
+
+            float scale = 0.8f;
+            var baseColliderSize = new Vector2(48 / Variables.PixelSize, 48 / Variables.PixelSize);
+            var colliderSize = baseColliderSize * scale;
+            var transform = new TransformComponent(position);
+            var gravity = new GravityComponent(300f);
+            var velocity = new VelocityComponent(Vector2.Zero);
+
+            Texture2D texture = Raylib.LoadTexture("Assets/Sprites/rpg_icons/spritesheet/spritesheet_48x48.png");
+            Rectangle source = new Rectangle(0, 0, 48, 48);
+
+
+            var colliderOffset = new Vector2(-colliderSize.X / 2f, -colliderSize.Y); // from feet
+            var renderableOffset = Vector2.Zero; // origin handled by DrawTexturePro
+
+            var collider = new ColliderComponent(colliderSize, colliderOffset);
+            var renderable = new RenderableComponent(texture, source, renderableOffset, scale);
+
+
+            // Add components
+            AddComponent(item, transform);
+            AddComponent(item, velocity);
+            AddComponent(item, gravity);
+            AddComponent(item, collider);
+            AddComponent(item, renderable);
+
+            return item;
         }
 
         public void DestroyEntity(Entity entity)

@@ -22,25 +22,19 @@ namespace Ation.Entities
             foreach (var (entity, _) in em.GetAll<PlayerInputComponent>())
             {
                 if (!em.TryGetComponent(entity, out VelocityComponent velocity)) continue;
-                if (!em.TryGetComponent(entity, out PositionComponent position)) continue;
-                if (!em.TryGetComponent(entity, out SizeComponent size)) continue;
+                if (!em.TryGetComponent(entity, out TransformComponent position)) continue;
 
                 if (Raylib.IsKeyDown(KeyboardKey.D)) velocity.Velocity.X = MoveSpeed;
                 else if (Raylib.IsKeyDown(KeyboardKey.A)) velocity.Velocity.X = -MoveSpeed;
                 else velocity.Velocity.X = 0f;
 
-                if (IsGrounded(position.Position, size.Size, world) &&
-                    Raylib.IsKeyPressed(KeyboardKey.W))
+                if (!em.TryGetComponent(entity, out ColliderComponent collider)) continue;
+
+                if (collider.IsGrounded && Raylib.IsKeyPressed(KeyboardKey.W))
                 {
                     velocity.Velocity.Y = JumpVelocity;
                 }
             }
-        }
-
-        private bool IsGrounded(Vector2 position, Vector2 size, World world)
-        {
-            Vector2 probe = new Vector2(position.X + size.X * 0.5f, position.Y + size.Y + 0.05f);
-            return world.IsCollidableAt((int)probe.X, (int)probe.Y);
         }
     }
 
@@ -92,7 +86,7 @@ namespace Ation.Entities
         {
             foreach (var (entity, intent) in em.GetAll<MovementIntentComponent>())
             {
-                if (!em.TryGetComponent(entity, out PositionComponent position)) continue;
+                if (!em.TryGetComponent(entity, out TransformComponent position)) continue;
                 if (!em.TryGetComponent(entity, out VelocityComponent velocity)) continue;
                 if (!em.TryGetComponent(entity, out ColliderComponent collider)) continue;
 
@@ -103,6 +97,8 @@ namespace Ation.Entities
                 TryMove(entity, ref pos, moveX, ref velocity.Velocity, collider, world, em);
                 TryMove(entity, ref pos, moveY, ref velocity.Velocity, collider, world, em);
 
+
+                collider.IsGrounded = CheckGrounded(pos, collider, world);
                 position.Position = pos;
             }
         }
@@ -148,7 +144,7 @@ namespace Ation.Entities
             foreach (var (other, otherCollider) in em.GetAll<ColliderComponent>())
             {
                 if (other.Id == self.Id) continue;
-                if (!em.TryGetComponent(other, out PositionComponent otherPos)) continue;
+                if (!em.TryGetComponent(other, out TransformComponent otherPos)) continue;
 
                 var aMin = pos;
                 var aMax = pos + size;
@@ -163,8 +159,23 @@ namespace Ation.Entities
 
             return false;
         }
+        private bool CheckGrounded(Vector2 pos, ColliderComponent collider, World world)
+        {
+            float startX = pos.X + collider.Offset.X;
+            float endX = startX + collider.Size.X;
+            float probeY = pos.Y + collider.Offset.Y + collider.Size.Y + 0.5f;
+
+            for (float x = startX; x < endX; x += 0.2f) // small step for precision
+            {
+                if (world.IsCollidableAt((int)x, (int)probeY))
+                    return true;
+            }
+
+            return false;
+        }
+
+
     }
 
 }
-
 

@@ -4,6 +4,8 @@ using Ation.Common;
 using Ation.Simulation;
 using Ation.GameWorld;
 using Ation.Entities;
+using System.Runtime.CompilerServices;
+using System.Net.Http.Headers;
 
 namespace Ation.Game
 {
@@ -12,6 +14,7 @@ namespace Ation.Game
         private int levelCounter = 0;
         private readonly World world;
         private readonly FallingSandSim sim;
+        private Renderer renderer;
 
         private Tool selectedTool = Tool.Material;
         private MaterialType selectedMaterial = MaterialType.Sand;
@@ -45,12 +48,8 @@ namespace Ation.Game
         public LegacyGameScene()
         {
             entityManager = new EntityManager();
-            playerEntity = entityManager.CreatePlayer(new Vector2(0, 0));
-
-            var blockPos = new Vector2(50, 80); // adjust as needed
-            var blockSize = new Vector2(20, 20); // in world units
-            entityManager.CreateStaticBlock(blockPos, blockSize);
-
+            playerEntity = entityManager.CreatePlayer(new Vector2(-15, 0));
+            var item = entityManager.CreateItem(new Vector2(15, -10));
             systems = new List<BaseSystem>
             {
                 new PlayerInputSystem(),
@@ -70,7 +69,11 @@ namespace Ation.Game
                 Zoom = 1.0f,
                 Rotation = 0f
             };
-            LevelIO.Load("Assets/test_level.json", world);
+            //DungeonGenerator.GenerateAndSave("Assets/test_level.json", Variables.ChunkSize, world.maxWorldSize);
+            LevelIO.Load("Assets/test_level_old.json", world);
+            //LevelIO.Load("Assets/test_level.json", world);
+            renderer = new Renderer(entityManager, world);
+
         }
 
         public override void ProcessInput()
@@ -162,6 +165,7 @@ namespace Ation.Game
 
             sim.Render(renderableChunks);
 
+
             int sizePx = Variables.ChunkSize * Variables.PixelSize;
             int totalChunks = world.maxWorldSize * 2 + 1;
             int totalSizePx = totalChunks * sizePx;
@@ -171,20 +175,8 @@ namespace Ation.Game
 
             Raylib.DrawRectangleLines(topLeftX, topLeftY, totalSizePx, totalSizePx, Color.Green);
 
-            foreach (var (entity, position) in entityManager.GetAll<PositionComponent>())
-            {
-                if (!entityManager.TryGetComponent(entity, out SizeComponent size)) continue;
 
-                Raylib.DrawRectangle(
-                    (int)(position.Position.X * Variables.PixelSize),
-                    (int)(position.Position.Y * Variables.PixelSize),
-                    (int)(size.Size.X * Variables.PixelSize),
-                    (int)(size.Size.Y * Variables.PixelSize),
-                    Color.Red
-                );
-            }
-
-
+            renderer.Render();
             Raylib.EndMode2D();
 
             Raylib.DrawText($"Material: {selectedMaterial}", 12, 60, 20, Color.Black);
