@@ -1,6 +1,8 @@
 using System.Numerics;
 using Raylib_cs;
 using Ation.GameWorld;
+using Ation.Simulation;
+
 
 namespace Ation.Entities
 {
@@ -13,7 +15,7 @@ namespace Ation.Entities
     public class PlayerInputSystem : BaseSystem
     {
         private const float MoveSpeed = 50f;
-        private const float JumpVelocity = -100f;
+        private const float JumpVelocity = -200f;
 
         public override string Name { get; set; } = "PlayerInputSystem";
 
@@ -23,19 +25,23 @@ namespace Ation.Entities
             {
                 if (!em.TryGetComponent(entity, out VelocityComponent velocity)) continue;
                 if (!em.TryGetComponent(entity, out TransformComponent position)) continue;
+                if (!em.TryGetComponent(entity, out ColliderComponent collider)) continue;
+                if (!em.TryGetComponent(entity, out StateComponent state)) continue;
 
                 if (Raylib.IsKeyDown(KeyboardKey.D)) velocity.Velocity.X = MoveSpeed;
                 else if (Raylib.IsKeyDown(KeyboardKey.A)) velocity.Velocity.X = -MoveSpeed;
                 else velocity.Velocity.X = 0f;
 
-                if (!em.TryGetComponent(entity, out ColliderComponent collider)) continue;
-
-                if (collider.IsGrounded && Raylib.IsKeyPressed(KeyboardKey.W))
+                if (Raylib.IsKeyPressed(KeyboardKey.W))
                 {
-                    velocity.Velocity.Y = JumpVelocity;
+                    if (state.IsInLiquid)
+                        velocity.Velocity.Y = -50f;
+                    else if (collider.IsGrounded)
+                        velocity.Velocity.Y = JumpVelocity;
                 }
             }
         }
+
     }
 
     public class GravitySystem : BaseSystem
@@ -46,13 +52,15 @@ namespace Ation.Entities
         {
             foreach (var (entity, gravity) in em.GetAll<GravityComponent>())
             {
-                if (em.TryGetComponent(entity, out VelocityComponent velocity))
-                {
-                    velocity.Velocity.Y += gravity.Gravity * dt;
-                }
+                if (!em.TryGetComponent(entity, out VelocityComponent velocity)) continue;
+                if (!em.TryGetComponent(entity, out StateComponent state)) continue;
+
+                float gravityFactor = state.IsInLiquid ? 0.1f : 1.0f;
+                velocity.Velocity.Y += gravity.Gravity * gravityFactor * dt;
             }
         }
     }
+
 
 
 
@@ -97,11 +105,12 @@ namespace Ation.Entities
                 TryMove(entity, ref pos, moveX, ref velocity.Velocity, collider, world, em);
                 TryMove(entity, ref pos, moveY, ref velocity.Velocity, collider, world, em);
 
-
                 collider.IsGrounded = CheckGrounded(pos, collider, world);
+
                 position.Position = pos;
             }
         }
+
 
         private void TryMove(Entity entity, ref Vector2 pos, Vector2 delta, ref Vector2 velocity, ColliderComponent collider, World world, EntityManager em)
         {
@@ -113,13 +122,31 @@ namespace Ation.Entities
             if (!hitsWorld && !hitsEntities)
             {
                 pos = newPos;
+                return;
             }
-            else
+
+            // Try stepping up by a small amount (e.g., 1–2 world units)
+            if (delta.X != 0)
             {
-                if (delta.X != 0) velocity.X = 0;
-                if (delta.Y != 0) velocity.Y = 0;
+                const float maxStepHeight = 2f; // world units
+                for (float step = 0.2f; step <= maxStepHeight; step += 0.2f)
+                {
+                    Vector2 stepUpPos = newPos - new Vector2(0, step); // try moving slightly up
+                    bool clear = !CollidesWithWorld(stepUpPos + collider.Offset, collider.Size, world) &&
+                                 !CollidesWithEntities(entity, stepUpPos + collider.Offset, collider.Size, em);
+                    if (clear)
+                    {
+                        pos = stepUpPos;
+                        return;
+                    }
+                }
             }
+
+            // Regular collision resolution
+            if (delta.X != 0) velocity.X = 0;
+            if (delta.Y != 0) velocity.Y = 0;
         }
+
 
         private bool CollidesWithWorld(Vector2 pos, Vector2 size, World world)
         {
@@ -173,8 +200,86 @@ namespace Ation.Entities
 
             return false;
         }
+        private bool CheckInLiquid(Vector2 pos, ColliderComponent collider, World world)
+        {
+            float startX = pos.X + collider.Offset.X;
+            float endX = startX + collider.Size.X;
+            float startY = pos.Y + collider.Offset.Y;
+            float endY = startY + collider.Size.Y;
+
+            for (float y = startY; y < endY; y += 1f)
+                for (float x = startX; x < endX; x += 0.5f)
+                {
+                    var material = world.Get((int)x, (int)y);
+                    if (material != null && MaterialFactory.GetClass(material.Type) == MaterialClass.Liquid)
+                        return true;
+                }
+
+            return false;
+        }
 
 
+
+    }
+
+
+    public class StateSystem : BaseSystem
+    {
+        public override string Name { get; set; } = "StateSystem";
+
+        public override void Update(EntityManager em, float dt, World world)
+        {
+            foreach (var (entity, state) in em.GetAll<StateComponent>())
+            {
+                if (!em.TryGetComponent(entity, out TransformComponent transform)) continue;
+                if (!em.TryGetComponent(entity, out ColliderComponent collider)) continue;
+
+                var pos = transform.Position;
+                var startX = pos.X + collider.Offset.X;
+                var endX = startX + collider.Size.X;
+                var startY = pos.Y + collider.Offset.Y;
+                var endY = startY + collider.Size.Y;
+
+                // Reset states
+                state.IsInLiquid = false;
+                state.IsInLava = false;
+
+                for (float y = startY; y < endY; y += 0.5f)
+                {
+                    for (float x = startX; x < endX; x += 2f)
+                    {
+                        var material = world.Get((int)x, (int)y);
+                        if (material == null) continue;
+
+                        var matClass = MaterialFactory.GetClass(material.Type);
+
+                        if (matClass == MaterialClass.Liquid)
+                            state.IsInLiquid = true;
+
+                        if (material.Type == MaterialType.Lava)
+                            state.IsInLava = true;
+                    }
+                }
+
+                // Auto ignite if in lava
+                if (state.IsInLava)
+                {
+                    state.IsOnFire = true;
+                    state.FireDuration = 2f;
+                }
+
+                // Handle fire duration
+                if (state.IsOnFire)
+                {
+                    state.FireDuration -= dt;
+                    if (state.FireDuration <= 0f)
+                    {
+                        state.IsOnFire = false;
+                        state.FireDuration = 0f;
+                    }
+                }
+            }
+        }
     }
 
 }

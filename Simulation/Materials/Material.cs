@@ -14,6 +14,7 @@ namespace Ation.Simulation
         public Vector2 worldPos;
         public Vector2 gridPos;
         public abstract MaterialType Type { get; }
+        public virtual MaterialClass Class => MaterialFactory.GetClass(Type);
 
         public float Mass = 1.0f;
         public float? Health { get; set; } = null;    // Health points (null = indestructible)

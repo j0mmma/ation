@@ -38,6 +38,8 @@ public class ColliderComponent : Component
     public Vector2 Size;
     public Vector2 Offset;
     public bool IsGrounded;
+    public bool IsInLiquid;
+
 
     public ColliderComponent(Vector2 size, Vector2 offset = default)
     {
@@ -70,5 +72,15 @@ public class RenderableComponent : Component
         Scale = scale;
         Tint = tint ?? Color.White;
     }
+}
+
+public class StateComponent : Component
+{
+    public bool IsInLiquid;
+    public bool IsInLava;
+    public bool IsOnFire;
+
+    // Optional timers or intensity levels
+    public float FireDuration = 0f;
 }
 

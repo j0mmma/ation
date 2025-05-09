@@ -12,7 +12,7 @@ namespace Ation.Game
             Raylib.SetTargetFPS(60);
 
             // Start with the legacy simulation scene
-            SceneManager.PushScene(new LegacyGameScene());
+            SceneManager.PushScene(new RougelikeScene());
 
             while (!Raylib.WindowShouldClose())
             {

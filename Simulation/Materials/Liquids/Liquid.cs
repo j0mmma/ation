@@ -10,7 +10,7 @@ namespace Ation.Simulation
         protected float friction = 0.1f;
         public float VerticalDamping { get; protected set; } = 0.5f;
         public float TurbulenceStrength { get; protected set; } = 0.01f;
-        protected virtual int MaxHorizontalDispersion => 2;
+        protected virtual int MaxHorizontalDispersion => 10;
 
 
         public Liquid(Vector2 worldPos) : base(worldPos) { }

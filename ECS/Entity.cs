@@ -11,14 +11,15 @@ namespace Ation.Entities
     public class Entity
     {
         public int Id { get; }
+        public string DisplayName { get; set; }
 
-        internal Entity(int id)
+        internal Entity(int id, string displayName = "")
         {
             Id = id;
+            DisplayName = string.IsNullOrEmpty(displayName) ? $"Entity({id})" : displayName;
         }
 
         public override int GetHashCode() => Id;
-        public override string ToString() => $"Entity({Id})";
     }
 
     public class EntityManager
@@ -38,14 +39,14 @@ namespace Ation.Entities
         {
             var player = CreateEntity();
 
-            float scale = 1.3f;
+            float scale = 1.1f;
             var baseColliderSize = new Vector2(10, 16);
             var colliderSize = baseColliderSize * scale;
             var transform = new TransformComponent(startPos);
             var velocity = new VelocityComponent(Vector2.Zero);
-            var gravity = new GravityComponent(300f);
+            var gravity = new GravityComponent(500f);
             var input = new PlayerInputComponent();
-
+            var state = new StateComponent();
             Texture2D texture = Raylib.LoadTexture("Assets/Sprites/Wanderer Magican/Idle.png");
             Rectangle source = new Rectangle(0, 0, 128, 128);
 
@@ -58,6 +59,7 @@ namespace Ation.Entities
 
 
             // Add components
+            AddComponent(player, state);
             AddComponent(player, transform);
             AddComponent(player, velocity);
             AddComponent(player, gravity);
