@@ -34,8 +34,6 @@ public class GravityComponent : Component
     public GravityComponent(float gravity) => Gravity = gravity;
 }
 
-
-
 public enum CollisionType
 {
     None,       // ignored
@@ -60,12 +58,10 @@ public class ColliderComponent : Component
 
 }
 
-
 public class MovementIntentComponent : Component
 {
     public Vector2 Delta;
 }
-
 
 public class RenderableComponent : Component
 {
@@ -97,9 +93,9 @@ public class StateComponent : Component
 
 public class ItemComponent : Component
 {
-    public Action<EntityManager, Entity, Entity, Vector2, Vector2>? UseAction { get; }
+    public Action<EntityManager, Entity, Entity, Vector2>? UseAction { get; }
 
-    public ItemComponent(Action<EntityManager, Entity, Entity, Vector2, Vector2>? useAction = null)
+    public ItemComponent(Action<EntityManager, Entity, Entity, Vector2>? useAction = null)
     {
         Name = "item";
         UseAction = useAction;

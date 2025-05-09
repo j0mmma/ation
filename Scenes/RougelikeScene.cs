@@ -15,14 +15,10 @@ namespace Ation.Game
         private readonly World world;
         private readonly FallingSandSim sim;
         private Renderer renderer;
-        private bool firstFrame = true;
         private Camera2D camera;
         private readonly EntityManager entityManager;
         private readonly List<BaseSystem> systems;
         private Entity playerEntity;
-
-
-        private enum Tool { Material, Wand }
 
 
         public RougelikeScene()
@@ -31,9 +27,6 @@ namespace Ation.Game
             playerEntity = entityManager.CreatePlayer(new Vector2(-15, 0));
             var item = entityManager.CreateItem(new Vector2(-30, -10));
 
-
-
-
             systems = new List<BaseSystem>
             {
                 new StateSystem(),
@@ -41,7 +34,8 @@ namespace Ation.Game
                 new GravitySystem(),
                 new MovementIntentSystem(),
                 new CollisionSystem(),
-                new PickupSystem()
+                new PickupSystem(),
+                new ItemUseSystem(camera)
             };
 
 

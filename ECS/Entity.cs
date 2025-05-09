@@ -85,6 +85,7 @@ namespace Ation.Entities
         {
             var item = CreateEntity();
 
+
             float scale = 0.8f;
             var baseColliderSize = new Vector2(48 / Variables.PixelSize, 48 / Variables.PixelSize);
             var colliderSize = baseColliderSize * scale;
@@ -112,8 +113,17 @@ namespace Ation.Entities
 
             // Add pickup behavior
             AddComponent(item, new PickupableComponent());
-            AddComponent(item, new ItemComponent());
             AddComponent(item, new DropCooldownComponent());
+            AddComponent(item, new ItemComponent((em, user, item, cursorPos) =>
+            {
+
+                Console.WriteLine("=======");
+                Console.WriteLine("=======");
+                Console.WriteLine("ItemUsed");
+                Console.WriteLine("=======");
+                Console.WriteLine("=======");
+                // Example: spawn explosion, heal player, shoot projectile, etc.
+            }));
 
             return item;
         }

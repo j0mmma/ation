@@ -109,10 +109,6 @@ namespace Ation.Entities
             }
         }
     }
-
-
-
-
     public class MovementIntentSystem : BaseSystem
     {
         public override string Name { get; set; } = "MovementIntentSystem";
@@ -131,9 +127,6 @@ namespace Ation.Entities
             }
         }
     }
-
-
-
 
     public class CollisionSystem : BaseSystem
     {
@@ -273,7 +266,6 @@ namespace Ation.Entities
 
     }
 
-
     public class StateSystem : BaseSystem
     {
         public override string Name { get; set; } = "StateSystem";
@@ -332,7 +324,6 @@ namespace Ation.Entities
             }
         }
     }
-
 
     public class PickupSystem : BaseSystem
     {
@@ -393,6 +384,36 @@ namespace Ation.Entities
         }
     }
 
+
+    public class ItemUseSystem : BaseSystem
+    {
+        public override string Name { get; set; } = "ItemUseSystem";
+        private readonly Camera2D camera;
+
+        public ItemUseSystem(Camera2D camera)
+        {
+            this.camera = camera;
+        }
+
+        public override void Update(EntityManager em, float dt, World world)
+        {
+            if (!Raylib.IsMouseButtonPressed(MouseButton.Left)) return;
+
+            foreach (var (player, _) in em.GetAll<PlayerInputComponent>())
+            {
+                if (!em.TryGetComponent(player, out InventoryComponent inventory)) continue;
+
+                var item = inventory.Slots[inventory.SelectedIndex];
+                if (item == null) continue;
+
+                if (em.TryGetComponent(item, out ItemComponent itemComp) && itemComp.UseAction != null)
+                {
+                    var mouseWorld = Raylib.GetScreenToWorld2D(Raylib.GetMousePosition(), camera);
+                    itemComp.UseAction(em, player, item, mouseWorld);
+                }
+            }
+        }
+    }
 
 
 
