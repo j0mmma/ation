@@ -19,12 +19,13 @@ namespace Ation.Game
         private readonly EntityManager entityManager;
         private readonly List<BaseSystem> systems;
         private Entity playerEntity;
+        private String LoadedMapPath;
 
 
         public RougelikeScene(string mapPath)
         {
 
-
+            LoadedMapPath = mapPath;
             camera = new Camera2D
             {
                 Target = new Vector2(Variables.ChunkSize * Variables.PixelSize / 2f, Variables.ChunkSize * Variables.PixelSize / 2f),
@@ -40,9 +41,9 @@ namespace Ation.Game
 
             entityManager = new EntityManager();
             playerEntity = entityManager.CreatePlayer(new Vector2(-15, 0));
-            var item = entityManager.CreateDefaultSpell(new Vector2(-30, -10));
+            var spell = entityManager.CreateDefaultSpell(new Vector2(-30, -10));
 
-            //entityManager.CreateEnemy(new Vector2(100, 20));
+            entityManager.CreateEnemy(new Vector2(100, 20));
             entityManager.CreateHealingPotion(new Vector2(-50, -10));
             systems = new List<BaseSystem>
             {
@@ -54,13 +55,16 @@ namespace Ation.Game
                 new ProjectileSystem(),
                 new PickupSystem(),
                 new ItemUseSystem(camera),
-                new AISystem(playerEntity, world)
+                new ScoreSystem(),
+                new EnemySpawnerSystem(playerEntity),
+                new AISystem(playerEntity, world),
+                new OutOfBoundsSystem(),
                 //new DamageSystem(),
             };
 
 
 
-            LevelIO.Load(mapPath, world);
+            LevelIO.Load(LoadedMapPath, world);
             renderer = new Renderer(entityManager, world);
 
         }
@@ -96,8 +100,34 @@ namespace Ation.Game
         }
 
 
+        private void OnGameOver()
+        {
+            float time = 0f;
+            int kills = 0;
+
+            if (entityManager.TryGetComponent(playerEntity, out ScoreComponent score))
+            {
+                time = score.TimeSurvived;
+                kills = score.EnemiesKilled;
+            }
+
+            Console.WriteLine($"Game Over! Time: {time:F1}s | Kills: {kills}");
+
+            // TODO: Replace with your actual scene transition
+            // SceneManager.PushScene(new DeathScene(time, kills));
+        }
+
+
         public override void Update(float dt)
         {
+            if (!entityManager.IsAlive(playerEntity) ||
+                    (entityManager.TryGetComponent(playerEntity, out HealthComponent hp) && hp.Current <= 0))
+            {
+                OnGameOver();
+                return;
+            }
+
+
             sim.Update(dt);
             world.RemoveEmptyChunks();
             foreach (var system in systems)
@@ -185,39 +215,51 @@ namespace Ation.Game
                 }
             }
 
+
             Raylib.EndMode2D();
 
             Raylib.DrawText($"FPS: {Raylib.GetFPS()}", 12, 12, 20, Color.Black);
-            Raylib.DrawText($"Particles: {sim.CountMaterials()}", 12, 35, 20, Color.Black);
-            Raylib.DrawText($"Chunks: {world.ChunkCount()}", 12, 110, 20, Color.Black);
-            Raylib.DrawText($"Renderable chunks: {renderableChunks.Count()}", 12, 130, 20, Color.Black);
-            if (entityManager.TryGetComponent(playerEntity, out StateComponent state))
-            {
-                int y = 160; // Starting Y offset
-                Raylib.DrawText($"States:", 12, y, 20, Color.DarkGray); y += 22;
-                Raylib.DrawText($"InLiquid: {state.IsInLiquid}", 12, y, 20, Color.DarkGray); y += 20;
-                Raylib.DrawText($"InLava:   {state.IsInLava}", 12, y, 20, Color.DarkGray); y += 20;
-                Raylib.DrawText($"OnFire:   {state.IsOnFire}", 12, y, 20, Color.DarkGray); y += 20;
-                Raylib.DrawText($"FireTime: {state.FireDuration:0.00}", 12, y, 20, Color.DarkGray);
-            }
-            //inventory
-            // legacy inv
-            // if (entityManager.TryGetComponent(playerEntity, out InventoryComponent inventory))
+            Raylib.DrawText($"Entities: {entityManager.EntityCount}", 12, 35, 20, Color.Black);
+
+            // Raylib.DrawText($"Particles: {sim.CountMaterials()}", 12, 35, 20, Color.Black);
+            // Raylib.DrawText($"Chunks: {world.ChunkCount()}", 12, 110, 20, Color.Black);
+            // Raylib.DrawText($"Renderable chunks: {renderableChunks.Count()}", 12, 130, 20, Color.Black);
+            // if (entityManager.TryGetComponent(playerEntity, out StateComponent state))
             // {
-            //     int y = 260;
-            //     Raylib.DrawText("Inventory:", 12, y, 20, Color.DarkGray);
-            //     y += 22;
-
-            //     for (int i = 0; i < inventory.Slots.Length; i++)
-            //     {
-            //         var item = inventory.Slots[i];
-            //         string itemText = item != null ? $"item_{item.Id}" : "(empty)";
-            //         Color color = i == inventory.SelectedIndex ? Color.Yellow : Color.Gray;
-
-            //         Raylib.DrawText($"[{i}] {itemText}", 12, y, 20, color);
-            //         y += 20;
-            //     }
+            //     int y = 160; // Starting Y offset
+            //     Raylib.DrawText($"States:", 12, y, 20, Color.DarkGray); y += 22;
+            //     Raylib.DrawText($"InLiquid: {state.IsInLiquid}", 12, y, 20, Color.DarkGray); y += 20;
+            //     Raylib.DrawText($"InLava:   {state.IsInLava}", 12, y, 20, Color.DarkGray); y += 20;
+            //     Raylib.DrawText($"OnFire:   {state.IsOnFire}", 12, y, 20, Color.DarkGray); y += 20;
+            //     Raylib.DrawText($"FireTime: {state.FireDuration:0.00}", 12, y, 20, Color.DarkGray);
             // }
+
+
+            if (entityManager.TryGetComponent(playerEntity, out ScoreComponent score))
+            {
+                int minutes = (int)(score.TimeSurvived / 60);
+                int seconds = (int)(score.TimeSurvived % 60);
+                string timeStr = $"{minutes:D2}:{seconds:D2}";
+
+                int fontSize = 20;
+                int spacing = 5;
+                string killsText = $"Kills: {score.EnemiesKilled}";
+                string timeText = $"Time: {timeStr}";
+
+                // Measure text widths
+                int timeWidth = Raylib.MeasureText(timeText, fontSize);
+                int killsWidth = Raylib.MeasureText(killsText, fontSize);
+                int maxWidth = Math.Max(timeWidth, killsWidth);
+
+                int screenWidth = Raylib.GetScreenWidth();
+                int x = (screenWidth - maxWidth) / 2;
+                int y = 12;
+
+                Raylib.DrawText(timeText, x, y, fontSize, Color.Black);
+                Raylib.DrawText(killsText, x, y + fontSize + spacing, fontSize, Color.Black);
+            }
+
+
 
             if (entityManager.TryGetComponent(playerEntity, out InventoryComponent inventory2))
             {

@@ -125,6 +125,7 @@ namespace Ation.Entities
             var health = new HealthComponent(100f);
             health.Current = health.Max * 0.25f;
             AddComponent(player, health);
+            AddComponent(player, new ScoreComponent());
 
             return player;
         }
@@ -184,7 +185,7 @@ namespace Ation.Entities
                 // Spawn a bit in front of player center (10 world units forward)
                 Vector2 spawnPos = playerCenter + direction * 10f;
 
-                em.CreateProjectile(spawnPos, direction, user);
+                em.CreateDefaultProjectile(spawnPos, direction, user);
             }));
 
 
@@ -269,7 +270,7 @@ namespace Ation.Entities
             return enemy;
         }
 
-        public Entity CreateProjectile(Vector2 position, Vector2 direction, Entity source)
+        public Entity CreateDefaultProjectile(Vector2 position, Vector2 direction, Entity source)
         {
             var projectile = CreateEntity();
 
@@ -286,7 +287,7 @@ namespace Ation.Entities
             AddComponent(projectile, new TransformComponent(position, scale));
             AddComponent(projectile, new VelocityComponent(direction * 350f));
             AddComponent(projectile, new StateComponent());
-            //AddComponent(projectile, new GravityComponent(1000f));
+            AddComponent(projectile, new GravityComponent(100f));
             AddComponent(projectile, new MovementIntentComponent());
 
             AddComponent(projectile, new ColliderComponent(colliderSize, colliderOffset, CollisionType.Passive));
@@ -299,7 +300,7 @@ namespace Ation.Entities
                 true,
                 true
             ));
-            var dmg = new DamageComponent(20f, source);
+            var dmg = new DamageComponent(45f, source);
             AddComponent(projectile, dmg);
             Console.WriteLine($"Added DamageComponent to projectile {projectile.Id} with amount {dmg.Amount}");
 

@@ -25,7 +25,7 @@ public class Renderer
     {
         DrawSprites();
         RenderHealthBars();
-        if (DebugDrawColliders) DrawColliders();
+        //if (DebugDrawColliders) DrawColliders();
         if (DebugDrawPositions) DrawEntityPositions();
         if (DebugDrawHealthBars) DrawHealthBars();
 
@@ -58,7 +58,7 @@ public class Renderer
 
             // Draw red outline around the sprite
             var outline = new Rectangle(dest.X - origin.X, dest.Y - origin.Y, dest.Width, dest.Height);
-            Raylib.DrawRectangleLinesEx(outline, 1, Color.Red);
+            //Raylib.DrawRectangleLinesEx(outline, 1, Color.Red);
         }
     }
 
@@ -81,7 +81,7 @@ public class Renderer
 
             Raylib.DrawRectangle((int)barPos.X, (int)barPos.Y, (int)barWidth, (int)barHeight, Color.Red);
             Raylib.DrawRectangle((int)barPos.X, (int)barPos.Y, (int)filled, (int)barHeight, Color.Green);
-            Raylib.DrawRectangleLines((int)barPos.X, (int)barPos.Y, (int)barWidth, (int)barHeight, Color.Black);
+            //Raylib.DrawRectangleLines((int)barPos.X, (int)barPos.Y, (int)barWidth, (int)barHeight, Color.Black);
         }
     }
 

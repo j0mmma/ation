@@ -181,6 +181,11 @@ public class AIComponent : Component
 {
     public float MoveSpeed = 30f;
     public float JumpVelocity = -250f;
-    public float AggroRange = 150f;
+    public float AggroRange = 250f;
 }
 
+public class ScoreComponent : Component
+{
+    public float TimeSurvived = 0f;
+    public int EnemiesKilled = 0;
+}

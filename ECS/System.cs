@@ -522,7 +522,11 @@ namespace Ation.Entities
 
                 targetHealth.Current -= dmg.Amount;
                 if (targetHealth.Current <= 0f)
+                {
                     em.DestroyEntity(target);
+                    if (dmg.Source != null && em.TryGetComponent(dmg.Source, out ScoreComponent score))
+                        score.EnemiesKilled++;
+                }
 
                 em.DestroyEntity(entity);
             }
@@ -592,7 +596,7 @@ namespace Ation.Entities
 
             // Use simulation's explosion
             var gridPos = Utils.WorldToGrid(position);
-            world.Explode((int)position.X, (int)position.Y, 8, 500f);
+            world.Explode((int)position.X, (int)position.Y, 3, 250f);
 
             Console.WriteLine($"++++++++ explosion coords: {position.X}, {position.Y}=====");
             Console.WriteLine($"++++++++ explosion grid: {gridPos.X}, {gridPos.Y}=====");
@@ -675,6 +679,146 @@ namespace Ation.Entities
         }
     }
 
+
+
+    public class ScoreSystem : BaseSystem
+    {
+        public override string Name { get; set; } = "ScoreSystem";
+
+        public override void Update(EntityManager em, float dt, World world)
+        {
+            foreach (var (entity, score) in em.GetAll<ScoreComponent>())
+            {
+                score.TimeSurvived += dt;
+            }
+        }
+    }
+
+
+    public class EnemySpawnerSystem : BaseSystem
+    {
+        public override string Name { get; set; } = "EnemySpawnerSystem";
+
+        private float cooldown = 3f;
+        private float timer = 0f;
+
+        private readonly Entity player;
+        private readonly float minRadius = 100f;
+        private readonly float maxRadius = 300f;
+        private readonly int maxAttempts = 20;
+
+        private readonly Random random = new();
+
+        public EnemySpawnerSystem(Entity player)
+        {
+            this.player = player;
+        }
+
+        public override void Update(EntityManager em, float dt, World world)
+        {
+            timer -= dt;
+            if (timer > 0f) return;
+
+            timer = cooldown;
+
+            // Cap: max 6 enemies at a time
+            int currentEnemyCount = em.GetAll<AIComponent>().Count();
+            if (currentEnemyCount >= 6) return;
+
+            if (!em.TryGetComponent(player, out TransformComponent playerTransform)) return;
+
+            Vector2 center = playerTransform.Position;
+
+            // Enemy collider info
+            Vector2 colliderSize = new Vector2(6, 16) * 1.1f;
+            Vector2 colliderOffset = new Vector2(-colliderSize.X / 2f, -colliderSize.Y); // center-bottom
+
+            for (int attempt = 0; attempt < maxAttempts; attempt++)
+            {
+                float angle = (float)(random.NextDouble() * MathF.PI * 2f);
+                float dist = minRadius + (float)random.NextDouble() * (maxRadius - minRadius);
+                Vector2 basePos = center + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * dist;
+
+                int x = (int)MathF.Floor(basePos.X);
+                int y = (int)MathF.Floor(basePos.Y);
+
+                // Search downward for solid ground (up to 100 tiles)
+                for (int dy = 0; dy < 100; dy++)
+                {
+                    int checkY = y + dy;
+                    if (!world.IsCollidableAt(x, checkY)) continue;
+
+                    Vector2 spawnPos = new Vector2(x + 0.5f, checkY - 2); // 1 unit above solid
+
+                    Vector2 checkMin = spawnPos + colliderOffset;
+                    Vector2 checkMax = checkMin + colliderSize;
+
+                    // Check for collision with world
+                    bool collidesWorld = false;
+                    for (int wx = (int)MathF.Floor(checkMin.X); wx <= (int)MathF.Floor(checkMax.X); wx++)
+                    {
+                        for (int wy = (int)MathF.Floor(checkMin.Y); wy <= (int)MathF.Floor(checkMax.Y); wy++)
+                        {
+                            if (world.IsCollidableAt(wx, wy))
+                            {
+                                collidesWorld = true;
+                                break;
+                            }
+                        }
+                        if (collidesWorld) break;
+                    }
+
+                    if (collidesWorld) continue;
+
+                    // Check for collision with existing entities
+                    bool collidesEntities = false;
+                    foreach (var (other, otherCol) in em.GetAll<ColliderComponent>())
+                    {
+                        if (!em.TryGetComponent(other, out TransformComponent otherTransform)) continue;
+
+                        Vector2 otherMin = otherTransform.Position + otherCol.Offset;
+                        Vector2 otherMax = otherMin + otherCol.Size;
+
+                        bool overlaps = !(checkMax.X <= otherMin.X || checkMin.X >= otherMax.X ||
+                                          checkMax.Y <= otherMin.Y || checkMin.Y >= otherMax.Y);
+
+                        if (overlaps)
+                        {
+                            collidesEntities = true;
+                            break;
+                        }
+                    }
+
+                    if (collidesEntities) continue;
+
+                    // Valid spot found
+                    em.CreateEnemy(spawnPos);
+                    return;
+                }
+            }
+        }
+
+
+
+
+    }
+
+
+    public class OutOfBoundsSystem : BaseSystem
+    {
+        public override string Name { get; set; } = "OutOfBoundsSystem";
+
+        private const float MinY = 1000f; // Adjust as needed
+
+        public override void Update(EntityManager em, float dt, World world)
+        {
+            foreach (var (entity, transform) in em.GetAll<TransformComponent>())
+            {
+                if (transform.Position.Y > MinY)
+                    em.DestroyEntity(entity);
+            }
+        }
+    }
 
 }
 
