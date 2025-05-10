@@ -220,7 +220,7 @@ namespace Ation.Entities
 
             if (delta.X != 0)
             {
-                const float maxStepHeight = 2f;
+                const float maxStepHeight = 4f;
                 for (float step = 0.2f; step <= maxStepHeight; step += 0.2f)
                 {
                     Vector2 stepUpPos = newPos - new Vector2(0, step);
@@ -246,9 +246,9 @@ namespace Ation.Entities
         {
             float startX = pos.X + collider.Offset.X;
             float endX = startX + collider.Size.X;
-            float probeY = pos.Y + collider.Offset.Y + collider.Size.Y + 0.5f;
+            float probeY = pos.Y + collider.Offset.Y + collider.Size.Y + 2.5f;
 
-            for (float x = startX; x < endX; x += 0.2f)
+            for (float x = startX; x < endX; x += 1f)
             {
                 if (world.IsCollidableAt((int)x, (int)probeY))
                     return true;
@@ -278,6 +278,10 @@ namespace Ation.Entities
                 if (other.Id == self.Id || otherCol.CollisionType != CollisionType.Solid) continue;
                 if (!em.TryGetComponent(other, out TransformComponent otherPos)) continue;
 
+                // Skip collision with the projectile's owner
+                if (em.TryGetComponent(self, out DamageComponent dmg) && dmg.Source != null && other.Id == dmg.Source.Id)
+                    continue;
+
                 Vector2 aMin = pos;
                 Vector2 aMax = pos + size;
                 Vector2 bMin = otherPos.Position + otherCol.Offset;
@@ -296,6 +300,7 @@ namespace Ation.Entities
             hitEntity = null;
             return false;
         }
+
 
         private bool CheckEntityOverlap(Entity self, Vector2 pos, Vector2 size, EntityManager em, out Entity? overlapped)
         {
@@ -493,9 +498,9 @@ namespace Ation.Entities
                     continue;
                 }
 
-                // Explode on geometry
                 if (!em.TryGetComponent(entity, out StateComponent state)) continue;
 
+                // Handle collision with world
                 if (state.HitSolidWorld)
                 {
                     Console.WriteLine($"++++Projectile {entity.Id} hit solid world");
@@ -507,8 +512,13 @@ namespace Ation.Entities
 
                 var target = state.HitEntity;
 
-                if (!em.TryGetComponent(target, out HealthComponent targetHealth)) continue;
                 if (!em.TryGetComponent(entity, out DamageComponent dmg)) continue;
+
+                // Skip damaging and destroying if the hit entity is the source
+                if (dmg.Source != null && target.Id == dmg.Source.Id)
+                    continue;
+
+                if (!em.TryGetComponent(target, out HealthComponent targetHealth)) continue;
 
                 targetHealth.Current -= dmg.Amount;
                 if (targetHealth.Current <= 0f)
@@ -517,6 +527,7 @@ namespace Ation.Entities
                 em.DestroyEntity(entity);
             }
         }
+
 
 
         private void HandleWorldImpact(EntityManager em, World world, Entity entity)

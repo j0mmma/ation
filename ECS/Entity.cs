@@ -25,9 +25,61 @@ namespace Ation.Entities
 
     public class EntityManager
     {
+        public int EntityCount => aliveEntities.Count;
+        public bool IsAlive(Entity entity) => aliveEntities.Contains(entity.Id);
         private int nextId = 1;
         private readonly Dictionary<Type, Dictionary<int, Component>> components = new();
         private readonly HashSet<int> aliveEntities = new();
+        public void DestroyEntity(Entity entity)
+        {
+            foreach (var store in components.Values)
+                store.Remove(entity.Id);
+            aliveEntities.Remove(entity.Id);
+        }
+
+        public void AddComponent<T>(Entity entity, T component) where T : Component
+        {
+            if (!aliveEntities.Contains(entity.Id))
+                throw new InvalidOperationException($"Cannot add component to destroyed entity {entity.Id}");
+
+            var type = typeof(T);
+            if (!components.TryGetValue(type, out var store))
+                store = components[type] = new Dictionary<int, Component>();
+            store[entity.Id] = component;
+        }
+
+        public bool TryGetComponent<T>(Entity entity, out T component) where T : Component
+        {
+            component = null!;
+            return components.TryGetValue(typeof(T), out var store)
+                && store.TryGetValue(entity.Id, out var raw)
+                && (component = (T)raw) != null;
+        }
+
+        public void RemoveComponent<T>(Entity entity) where T : Component
+        {
+            if (components.TryGetValue(typeof(T), out var store))
+                store.Remove(entity.Id);
+        }
+
+        public IEnumerable<(Entity, T)> GetAll<T>() where T : Component
+        {
+            if (components.TryGetValue(typeof(T), out var store))
+            {
+                foreach (var (id, comp) in store)
+                {
+                    if (aliveEntities.Contains(id))
+                        yield return (new Entity(id), (T)comp);
+                }
+            }
+        }
+
+        public IEnumerable<Entity> GetAllEntities()
+        {
+            foreach (int id in aliveEntities)
+                yield return new Entity(id);
+        }
+
 
         public Entity CreateEntity()
         {
@@ -71,22 +123,13 @@ namespace Ation.Entities
             AddComponent(player, renderable);
             AddComponent(player, inventory);
             var health = new HealthComponent(100f);
-            health.Current = health.Max;
+            health.Current = health.Max * 0.25f;
             AddComponent(player, health);
 
             return player;
         }
 
-
-        public Entity CreateStaticBlock(Vector2 position, Vector2 size)
-        {
-            var entity = CreateEntity();
-            AddComponent(entity, new TransformComponent(position));
-            AddComponent(entity, new ColliderComponent(size));
-            return entity;
-        }
-
-        public Entity CreateItem(Vector2 position)
+        public Entity CreateDefaultSpell(Vector2 position)
         {
             var item = CreateEntity();
 
@@ -149,6 +192,38 @@ namespace Ation.Entities
 
 
             return item;
+        }
+
+        public Entity CreateHealingPotion(Vector2 position)
+        {
+            var potion = CreateEntity();
+
+            float scale = 0.8f;
+            var size = new Vector2(48 / Variables.PixelSize, 48 / Variables.PixelSize) * scale;
+            var transform = new TransformComponent(position);
+            var texture = Raylib.LoadTexture("Assets/Sprites/rpg_icons/spritesheet/spritesheet_48x48.png");
+            var source = new Rectangle(5 * 48, 15 * 48, 48, 48); // adjust to potion sprite
+
+            AddComponent(potion, new TransformComponent(position));
+            AddComponent(potion, new VelocityComponent(Vector2.Zero));
+            AddComponent(potion, new GravityComponent(300f));
+            AddComponent(potion, new ColliderComponent(size, new Vector2(-size.X / 2f, -size.Y), CollisionType.Passive));
+            AddComponent(potion, new RenderableComponent(texture, source, Vector2.Zero, scale));
+            AddComponent(potion, new StateComponent());
+            AddComponent(potion, new PickupableComponent());
+            AddComponent(potion, new DropCooldownComponent());
+
+            AddComponent(potion, new ItemComponent((em, user, item, _) =>
+            {
+                if (!em.TryGetComponent(user, out HealthComponent health)) return;
+
+                float healAmount = 30f;
+                health.Current = MathF.Min(health.Current + healAmount, health.Max);
+
+                em.DestroyEntity(item); // consume potion
+            }));
+
+            return potion;
         }
 
         public Entity CreateEnemy(Vector2 position)
@@ -231,62 +306,6 @@ namespace Ation.Entities
             return projectile;
         }
 
-
-
-
-        public void DestroyEntity(Entity entity)
-        {
-            foreach (var store in components.Values)
-                store.Remove(entity.Id);
-            aliveEntities.Remove(entity.Id);
-        }
-
-        public bool IsAlive(Entity entity) => aliveEntities.Contains(entity.Id);
-
-        public void AddComponent<T>(Entity entity, T component) where T : Component
-        {
-            if (!aliveEntities.Contains(entity.Id))
-                throw new InvalidOperationException($"Cannot add component to destroyed entity {entity.Id}");
-
-            var type = typeof(T);
-            if (!components.TryGetValue(type, out var store))
-                store = components[type] = new Dictionary<int, Component>();
-            store[entity.Id] = component;
-        }
-
-        public bool TryGetComponent<T>(Entity entity, out T component) where T : Component
-        {
-            component = null!;
-            return components.TryGetValue(typeof(T), out var store)
-                && store.TryGetValue(entity.Id, out var raw)
-                && (component = (T)raw) != null;
-        }
-
-        public void RemoveComponent<T>(Entity entity) where T : Component
-        {
-            if (components.TryGetValue(typeof(T), out var store))
-                store.Remove(entity.Id);
-        }
-
-        public IEnumerable<(Entity, T)> GetAll<T>() where T : Component
-        {
-            if (components.TryGetValue(typeof(T), out var store))
-            {
-                foreach (var (id, comp) in store)
-                {
-                    if (aliveEntities.Contains(id))
-                        yield return (new Entity(id), (T)comp);
-                }
-            }
-        }
-
-        public IEnumerable<Entity> GetAllEntities()
-        {
-            foreach (int id in aliveEntities)
-                yield return new Entity(id);
-        }
-
-        public int EntityCount => aliveEntities.Count;
 
     }
 

@@ -40,10 +40,10 @@ namespace Ation.Game
 
             entityManager = new EntityManager();
             playerEntity = entityManager.CreatePlayer(new Vector2(-15, 0));
-            var item = entityManager.CreateItem(new Vector2(-30, -10));
+            var item = entityManager.CreateDefaultSpell(new Vector2(-30, -10));
 
-            entityManager.CreateEnemy(new Vector2(100, 20));
-
+            //entityManager.CreateEnemy(new Vector2(100, 20));
+            entityManager.CreateHealingPotion(new Vector2(-50, -10));
             systems = new List<BaseSystem>
             {
                 new StateSystem(),
@@ -119,7 +119,6 @@ namespace Ation.Game
 
             sim.Render(renderableChunks);
 
-
             int sizePx = Variables.ChunkSize * Variables.PixelSize;
             int totalChunks = world.maxWorldSize * 2 + 1;
             int totalSizePx = totalChunks * sizePx;
@@ -129,12 +128,14 @@ namespace Ation.Game
 
             Raylib.DrawRectangleLines(topLeftX, topLeftY, totalSizePx, totalSizePx, Color.Green);
 
-
             renderer.Render();
 
+            TransformComponent playerTransform;
+            ColliderComponent playerCol;
+
             // draw line to cursor
-            if (entityManager.TryGetComponent(playerEntity, out TransformComponent playerTransform) &&
-                        entityManager.TryGetComponent(playerEntity, out ColliderComponent playerCol))
+            if (entityManager.TryGetComponent(playerEntity, out playerTransform) &&
+                entityManager.TryGetComponent(playerEntity, out playerCol))
             {
                 Vector2 playerOrigin = playerTransform.Position + playerCol.Offset + playerCol.Size * 0.5f;
 
@@ -150,6 +151,38 @@ namespace Ation.Game
 
 
                 //Raylib.DrawText($"X:{cursorPx.X} Y:{cursorPx.Y}", (int)cursorPx.X + 12, (int)cursorPx.Y + 12, 16, Color.DarkGray);
+
+                // Draw selected item "in-hand"
+                if (entityManager.TryGetComponent(playerEntity, out InventoryComponent inventory))
+                {
+                    var selectedItem = inventory.Slots[inventory.SelectedIndex];
+                    if (selectedItem != null && entityManager.TryGetComponent(selectedItem, out RenderableComponent heldRenderable))
+                    {
+                        Vector2 playerCenter = playerTransform.Position + playerCol.Offset + playerCol.Size * 0.5f;
+                        Vector2 heldOffset = new Vector2(4f, 0f); // world units offset
+                        Vector2 heldPos = (playerCenter + heldOffset) * Variables.PixelSize;
+
+                        float scale = heldRenderable.Scale * 0.5f;
+                        float sizeX = heldRenderable.Source.Width * scale;
+                        float sizeY = heldRenderable.Source.Height * scale;
+
+                        Rectangle dest = new Rectangle(
+                            heldPos.X,
+                            heldPos.Y,
+                            sizeX,
+                            sizeY
+                        );
+
+                        Raylib.DrawTexturePro(
+                            heldRenderable.Texture,
+                            heldRenderable.Source,
+                            dest,
+                            new Vector2(sizeX / 2, sizeY / 2),
+                            0f,
+                            heldRenderable.Tint
+                        );
+                    }
+                }
             }
 
             Raylib.EndMode2D();
@@ -167,38 +200,76 @@ namespace Ation.Game
                 Raylib.DrawText($"OnFire:   {state.IsOnFire}", 12, y, 20, Color.DarkGray); y += 20;
                 Raylib.DrawText($"FireTime: {state.FireDuration:0.00}", 12, y, 20, Color.DarkGray);
             }
+            //inventory
+            // legacy inv
+            // if (entityManager.TryGetComponent(playerEntity, out InventoryComponent inventory))
+            // {
+            //     int y = 260;
+            //     Raylib.DrawText("Inventory:", 12, y, 20, Color.DarkGray);
+            //     y += 22;
 
-            if (entityManager.TryGetComponent(playerEntity, out InventoryComponent inventory))
+            //     for (int i = 0; i < inventory.Slots.Length; i++)
+            //     {
+            //         var item = inventory.Slots[i];
+            //         string itemText = item != null ? $"item_{item.Id}" : "(empty)";
+            //         Color color = i == inventory.SelectedIndex ? Color.Yellow : Color.Gray;
+
+            //         Raylib.DrawText($"[{i}] {itemText}", 12, y, 20, color);
+            //         y += 20;
+            //     }
+            // }
+
+            if (entityManager.TryGetComponent(playerEntity, out InventoryComponent inventory2))
             {
-                int y = 260;
-                Raylib.DrawText("Inventory:", 12, y, 20, Color.DarkGray);
-                y += 22;
+                int slotSize = 48;
+                int slotMargin = 6;
+                int slotsCount = inventory2.Slots.Length;
+                int totalWidth = slotsCount * (slotSize + slotMargin) - slotMargin;
 
-                for (int i = 0; i < inventory.Slots.Length; i++)
+                int screenWidth = Raylib.GetScreenWidth();
+                int startX = screenWidth - totalWidth - 20; // 20px from right edge
+                int y = 20; // 20px from top
+
+                for (int i = 0; i < slotsCount; i++)
                 {
-                    var item = inventory.Slots[i];
-                    string itemText = item != null ? $"item_{item.Id}" : "(empty)";
-                    Color color = i == inventory.SelectedIndex ? Color.Yellow : Color.Gray;
+                    int x = startX + i * (slotSize + slotMargin);
+                    Color border = i == inventory2.SelectedIndex ? Color.Yellow : Color.DarkGray;
 
-                    Raylib.DrawText($"[{i}] {itemText}", 12, y, 20, color);
-                    y += 20;
+                    // Draw slot background + border
+                    Raylib.DrawRectangle(x, y, slotSize, slotSize, Color.LightGray);
+                    Raylib.DrawRectangleLines(x, y, slotSize, slotSize, border);
+
+                    var itemEntity = inventory2.Slots[i];
+                    if (itemEntity != null && entityManager.TryGetComponent(itemEntity, out RenderableComponent renderable))
+                    {
+                        Texture2D texture = renderable.Texture;
+                        Rectangle source = renderable.Source;
+
+                        Rectangle dest = new Rectangle(x + 4, y + 4, slotSize - 8, slotSize - 8);
+
+                        Raylib.DrawTexturePro(
+                            texture,
+                            source,
+                            dest,
+                            Vector2.Zero,
+                            0f,
+                            Color.White
+                        );
+                    }
                 }
             }
-
-
 
             Vector2 mouseScreen = Raylib.GetMousePosition();
             Vector2 mouseWorld = Raylib.GetScreenToWorld2D(mouseScreen, camera);
             int gridX = (int)(mouseWorld.X / Variables.PixelSize);
             int gridY = (int)(mouseWorld.Y / Variables.PixelSize);
 
-
             int xPx = (int)mouseWorld.X;
             int yPx = (int)mouseWorld.Y;
 
             Raylib.DrawText($"X:{gridX} Y:{gridY} | {xPx}, {yPx}", (int)mouseScreen.X + 12, (int)mouseScreen.Y + 12, 16, Color.DarkGray);
-
         }
+
 
 
         private List<Chunk> GetRenderableChunks()
