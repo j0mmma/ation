@@ -189,3 +189,16 @@ public class ScoreComponent : Component
     public float TimeSurvived = 0f;
     public int EnemiesKilled = 0;
 }
+public class ManaComponent : Component
+{
+    public float Current;
+    public float Max;
+    public float RechargeRate;
+
+    public ManaComponent(float max, float rechargeRate)
+    {
+        Max = max;
+        Current = max;
+        RechargeRate = rechargeRate;
+    }
+}

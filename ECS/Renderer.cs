@@ -25,6 +25,7 @@ public class Renderer
     {
         DrawSprites();
         RenderHealthBars();
+        RenderManaBars();
         //if (DebugDrawColliders) DrawColliders();
         if (DebugDrawPositions) DrawEntityPositions();
         if (DebugDrawHealthBars) DrawHealthBars();
@@ -82,6 +83,28 @@ public class Renderer
             Raylib.DrawRectangle((int)barPos.X, (int)barPos.Y, (int)barWidth, (int)barHeight, Color.Red);
             Raylib.DrawRectangle((int)barPos.X, (int)barPos.Y, (int)filled, (int)barHeight, Color.Green);
             //Raylib.DrawRectangleLines((int)barPos.X, (int)barPos.Y, (int)barWidth, (int)barHeight, Color.Black);
+        }
+    }
+
+    private void RenderManaBars()
+    {
+        foreach (var (entity, mana) in em.GetAll<ManaComponent>())
+        {
+            if (!em.TryGetComponent(entity, out TransformComponent transform)) continue;
+
+            float worldX = transform.Position.X * Variables.PixelSize;
+            float worldY = transform.Position.Y * Variables.PixelSize;
+
+            float barWidth = 40;
+            float barHeight = 4;
+
+            float filled = (mana.Current / mana.Max) * barWidth;
+
+            // Slightly below the health bar
+            Vector2 barPos = new Vector2(worldX - barWidth / 2f, worldY - 92);
+
+            Raylib.DrawRectangle((int)barPos.X, (int)barPos.Y, (int)barWidth, (int)barHeight, Color.Black);
+            Raylib.DrawRectangle((int)barPos.X, (int)barPos.Y, (int)filled, (int)barHeight, Color.Blue);
         }
     }
 

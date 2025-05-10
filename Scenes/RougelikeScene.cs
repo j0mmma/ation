@@ -6,6 +6,7 @@ using Ation.GameWorld;
 using Ation.Entities;
 using System.Runtime.CompilerServices;
 using System.Net.Http.Headers;
+using System.Text.Json;
 
 namespace Ation.Game
 {
@@ -59,6 +60,8 @@ namespace Ation.Game
                 new EnemySpawnerSystem(playerEntity),
                 new AISystem(playerEntity, world),
                 new OutOfBoundsSystem(),
+                new ManaRechargeSystem(),
+                new EnemyMeleeDamageSystem(),
                 //new DamageSystem(),
             };
 
@@ -113,9 +116,46 @@ namespace Ation.Game
 
             Console.WriteLine($"Game Over! Time: {time:F1}s | Kills: {kills}");
 
-            // TODO: Replace with your actual scene transition
-            // SceneManager.PushScene(new DeathScene(time, kills));
+            entityManager.DestroyEntity(playerEntity);
+            SaveScoreIfBetter(LoadedMapPath, time, kills);
+
+            string mapName = Path.GetFileNameWithoutExtension(LoadedMapPath);
+            SceneManager.PopScene(); // remove RougelikeScene from stack
+            SceneManager.PushScene(new GameOverScene(time, kills, mapName));
         }
+
+
+        private void SaveScoreIfBetter(string mapPath, float time, int kills)
+        {
+            string scoreFile = "Assets/score.json";
+            var newRecord = new ScoreRecord
+            {
+                Map = Path.GetFileNameWithoutExtension(mapPath),
+                TimeSurvived = time,
+                EnemiesKilled = kills
+            };
+
+            List<ScoreRecord> records = new();
+            if (File.Exists(scoreFile))
+            {
+                string json = File.ReadAllText(scoreFile);
+                if (!string.IsNullOrWhiteSpace(json)) // <== FIX
+                    records = JsonSerializer.Deserialize<List<ScoreRecord>>(json) ?? new();
+            }
+
+            var existing = records.FirstOrDefault(r => r.Map == newRecord.Map);
+            if (existing == null ||
+                newRecord.TimeSurvived > existing.TimeSurvived ||
+                newRecord.EnemiesKilled > existing.EnemiesKilled)
+            {
+                records.RemoveAll(r => r.Map == newRecord.Map);
+                records.Add(newRecord);
+                File.WriteAllText(scoreFile, JsonSerializer.Serialize(records, new JsonSerializerOptions { WriteIndented = true }));
+            }
+        }
+
+
+
 
 
         public override void Update(float dt)
@@ -354,4 +394,12 @@ namespace Ation.Game
 
 
     }
+
+    public class ScoreRecord
+    {
+        public string Map { get; set; } = "";
+        public float TimeSurvived { get; set; }
+        public int EnemiesKilled { get; set; }
+    }
+
 }

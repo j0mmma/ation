@@ -123,10 +123,10 @@ namespace Ation.Entities
             AddComponent(player, renderable);
             AddComponent(player, inventory);
             var health = new HealthComponent(100f);
-            health.Current = health.Max * 0.25f;
+            // health.Current = health.Max * 0.25f;
             AddComponent(player, health);
             AddComponent(player, new ScoreComponent());
-
+            AddComponent(player, new ManaComponent(150f, 40f));
             return player;
         }
 
@@ -165,28 +165,28 @@ namespace Ation.Entities
             AddComponent(item, new DropCooldownComponent());
             AddComponent(item, new ItemComponent((em, user, item, cursorPos) =>
             {
-                if (!em.TryGetComponent(user, out TransformComponent playerTransform))
-                    return;
+                const float ManaCost = 20f;
 
-                if (!em.TryGetComponent(user, out ColliderComponent playerCol))
-                    return;
+                if (!em.TryGetComponent(user, out ManaComponent mana)) return;
+                if (mana.Current < ManaCost) return;
 
-                // Accurate center of player collider in world units
+                mana.Current -= ManaCost;
+
+                if (!em.TryGetComponent(user, out TransformComponent playerTransform)) return;
+                if (!em.TryGetComponent(user, out ColliderComponent playerCol)) return;
+
                 Vector2 playerCenter = playerTransform.Position + playerCol.Offset + playerCol.Size * 0.5f;
-
-                Vector2 to = cursorPos;
-                Vector2 direction = to - playerCenter * Variables.PixelSize;
+                Vector2 direction = cursorPos - playerCenter * Variables.PixelSize;
 
                 if (direction.LengthSquared() < 0.01f)
                     direction = new Vector2(1, 0); // fallback
 
                 direction = Vector2.Normalize(direction);
-
-                // Spawn a bit in front of player center (10 world units forward)
                 Vector2 spawnPos = playerCenter + direction * 10f;
 
                 em.CreateDefaultProjectile(spawnPos, direction, user);
             }));
+
 
 
 
@@ -285,7 +285,7 @@ namespace Ation.Entities
             Rectangle sprite = new Rectangle(5 * 48, 9 * 48, 48, 48);
 
             AddComponent(projectile, new TransformComponent(position, scale));
-            AddComponent(projectile, new VelocityComponent(direction * 350f));
+            AddComponent(projectile, new VelocityComponent(direction * 400f));
             AddComponent(projectile, new StateComponent());
             AddComponent(projectile, new GravityComponent(100f));
             AddComponent(projectile, new MovementIntentComponent());

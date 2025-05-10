@@ -703,7 +703,7 @@ namespace Ation.Entities
         private float timer = 0f;
 
         private readonly Entity player;
-        private readonly float minRadius = 100f;
+        private readonly float minRadius = 50f;
         private readonly float maxRadius = 300f;
         private readonly int maxAttempts = 20;
 
@@ -819,6 +819,44 @@ namespace Ation.Entities
             }
         }
     }
+
+
+    public class ManaRechargeSystem : BaseSystem
+    {
+        public override string Name { get; set; } = "ManaRechargeSystem";
+
+        public override void Update(EntityManager em, float dt, World world)
+        {
+            foreach (var (entity, mana) in em.GetAll<ManaComponent>())
+            {
+                mana.Current += mana.RechargeRate * dt;
+                if (mana.Current > mana.Max) mana.Current = mana.Max;
+            }
+        }
+    }
+    public class EnemyMeleeDamageSystem : BaseSystem
+    {
+        public override string Name { get; set; } = "EnemyMeleeDamageSystem";
+        private const float ContactDamage = 50f;
+
+        public override void Update(EntityManager em, float dt, World world)
+        {
+            foreach (var (enemy, _) in em.GetAll<AIComponent>())
+            {
+                if (!em.TryGetComponent(enemy, out StateComponent state)) continue;
+                if (state.HitEntity == null) continue;
+
+                var target = state.HitEntity;
+
+                // Only apply to player
+                if (!em.TryGetComponent(target, out PlayerInputComponent _)) continue;
+                if (!em.TryGetComponent(target, out HealthComponent health)) continue;
+
+                health.Current -= ContactDamage * dt;
+            }
+        }
+    }
+
 
 }
 

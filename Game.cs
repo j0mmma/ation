@@ -17,7 +17,7 @@ namespace Ation.Game
             Raylib.SetExitKey(KeyboardKey.Null); // Prevent ESC from auto-closing window
             //Raylib.SetTargetFPS(60);
 
-            SceneManager.PushScene(new RougelikeScene("Assets/Levels/level1.json"));
+            SceneManager.PushScene(new MainMenuScene());
 
             while (!Raylib.WindowShouldClose())
             {
