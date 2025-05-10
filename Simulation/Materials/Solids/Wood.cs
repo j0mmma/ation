@@ -11,10 +11,18 @@ namespace Ation.Simulation
 
         public Wood(Vector2 pos) : base(pos)
         {
-            Color = Raylib_cs.Color.Brown;
+            var baseColor = Raylib_cs.Color.DarkBrown;
+
+            float variation = Raylib.GetRandomValue(-20, 20) / 500f; // ± ~8% variation
+
+            int r = Math.Clamp((int)(baseColor.R * (1f + variation)), 0, 255);
+            int g = Math.Clamp((int)(baseColor.G * (1f + variation)), 0, 255);
+            int b = Math.Clamp((int)(baseColor.B * (1f + variation)), 0, 255);
+
+            Color = new Color(r, g, b, 255);
             Mass = float.PositiveInfinity;
             Health = 350;
-            Flammability = 0.7f; // Highly flammable
+            Flammability = 0.7f;
             ExplosionResistance = 0.4f;
         }
 

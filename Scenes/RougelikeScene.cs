@@ -21,10 +21,15 @@ namespace Ation.Game
         private readonly List<BaseSystem> systems;
         private Entity playerEntity;
         private String LoadedMapPath;
+        private Texture2D backgroundTexture1;
+        private Texture2D backgroundTexture2;
 
 
         public RougelikeScene(string mapPath)
         {
+            backgroundTexture1 = Raylib.LoadTexture("Assets/Sprites/LevelBackgrounds/Background_post/Demo.png");
+            backgroundTexture2 = Raylib.LoadTexture("Assets/Sprites/LevelBackgrounds/free-pixel-art-cloud-and-sky-backgrounds/2. NEW CLOUDS/2.png");
+
 
             LoadedMapPath = mapPath;
             camera = new Camera2D
@@ -185,6 +190,27 @@ namespace Ation.Game
         public override void Render()
         {
             var renderableChunks = GetRenderableChunks();
+
+            Raylib.DrawTexturePro(
+                backgroundTexture1,
+                new Rectangle(0, 0, backgroundTexture1.Width, backgroundTexture1.Height),
+                new Rectangle(0, 0, Raylib.GetScreenWidth(), Raylib.GetScreenHeight()),
+                Vector2.Zero,
+                0f,
+                Color.White
+            );
+            // Raylib.DrawTexturePro(
+            //     backgroundTexture2,
+            //     new Rectangle(0, 0, backgroundTexture2.Width, backgroundTexture2.Height),
+            //     new Rectangle(0, 0, Raylib.GetScreenWidth(), Raylib.GetScreenHeight()),
+            //     Vector2.Zero,
+            //     0f,
+            //     Color.White
+            // );
+
+            Raylib.DrawRectangle(0, 0, Raylib.GetScreenWidth(), Raylib.GetScreenHeight(), new Color(0, 0, 0, 80)); // dark tint overlay
+
+
             Raylib.BeginMode2D(camera);
 
             sim.Render(renderableChunks);

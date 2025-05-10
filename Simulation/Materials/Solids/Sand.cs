@@ -10,7 +10,23 @@ namespace Ation.Simulation
 
         public Sand(Vector2 pos) : base(pos)
         {
-            Color = Color.Yellow;
+            Color baseColor = Color.Yellow;
+
+            // 1 in 10 chance to modify brightness
+            if (Raylib.GetRandomValue(0, 9) == 0)
+            {
+                float brightnessFactor = Raylib.GetRandomValue(50, 120) / 100f; // 0.8x to 1.2x
+                int r = Math.Clamp((int)(baseColor.R * brightnessFactor), 0, 255);
+                int g = Math.Clamp((int)(baseColor.G * brightnessFactor), 0, 255);
+                int b = Math.Clamp((int)(baseColor.B * brightnessFactor), 0, 255);
+                Color = new Color(r, g, b, 255);
+            }
+
+            else
+            {
+                Color = baseColor;
+            }
+
             Mass = 1.0f;
             Health = 150;
             ExplosionResistance = 0.5f;

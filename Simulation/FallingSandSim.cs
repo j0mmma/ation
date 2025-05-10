@@ -108,7 +108,7 @@ namespace Ation.Simulation
                 int widthPx = width * Variables.PixelSize;
                 int heightPx = height * Variables.PixelSize;
 
-                Raylib.DrawRectangleLines(chunkPixelX, chunkPixelY, widthPx, heightPx, Color.Red);
+                //Raylib.DrawRectangleLines(chunkPixelX, chunkPixelY, widthPx, heightPx, Color.Red);
             }
         }
 
