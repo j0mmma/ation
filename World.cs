@@ -138,5 +138,11 @@ namespace Ation.GameWorld
         {
             return chunks.Values;
         }
+
+        public void Explode(int cx, int cy, int radius, float force)
+        {
+            var explosion = new Explosion(this, cx, cy, radius, force);
+            explosion.Enact();
+        }
     }
 }

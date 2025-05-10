@@ -53,7 +53,7 @@ namespace Ation.Game
             systems = new List<BaseSystem>
             {
                 new StateSystem(),
-                new PlayerInputSystem(),
+                new PlayerInputSystem(camera),
                 new GravitySystem(),
                 new MovementIntentSystem(),
                 new CollisionSystem()
@@ -98,7 +98,7 @@ namespace Ation.Game
                 int x = (int)gridPos.X;
                 int y = (int)gridPos.Y;
 
-                sim.Explode(x, y, radius: 15, force: 400f);
+                world.Explode(x, y, radius: 15, force: 400f);
             }
 
             float cameraSpeed = 800f * Raylib.GetFrameTime();

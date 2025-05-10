@@ -124,3 +124,52 @@ public class DropCooldownComponent : Component
         TimeRemaining = duration;
     }
 }
+
+public class HealthComponent : Component
+{
+    public float Current;
+    public float Max;
+
+    public HealthComponent(float max)
+    {
+        Max = max;
+        Current = max;
+    }
+}
+
+
+public class DamageComponent : Component
+{
+    public float Amount;
+    public Entity? Source;
+    public bool AreaOfEffect;
+    public float Radius;
+
+    public DamageComponent(float amount, Entity? source = null, bool aoe = false, float radius = 0f)
+    {
+        Name = "damageComponent";
+        Amount = amount;
+        Source = source;
+        AreaOfEffect = aoe;
+        Radius = radius;
+    }
+}
+
+public class ProjectileComponent : Component
+{
+    public Vector2 Direction;
+    public float Speed;
+    public float Lifetime;
+    public bool InteractsWithGeometry;
+    public bool DestroyOnImpact;
+
+    public ProjectileComponent(Vector2 direction, float speed, float lifetime = 5f, bool interactsWithGeometry = true, bool destroyOnImpact = true)
+    {
+        Name = "projectile";
+        Direction = Vector2.Normalize(direction);
+        Speed = speed;
+        Lifetime = lifetime;
+        InteractsWithGeometry = interactsWithGeometry;
+        DestroyOnImpact = destroyOnImpact;
+    }
+}

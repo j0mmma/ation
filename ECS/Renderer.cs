@@ -24,7 +24,7 @@ public class Renderer
     public void Render()
     {
         DrawSprites();
-
+        RenderHealthBars();
         if (DebugDrawColliders) DrawColliders();
         if (DebugDrawPositions) DrawEntityPositions();
         if (DebugDrawHealthBars) DrawHealthBars();
@@ -62,7 +62,28 @@ public class Renderer
         }
     }
 
+    public void RenderHealthBars()
+    {
+        foreach (var (entity, health) in em.GetAll<HealthComponent>())
+        {
+            if (!em.TryGetComponent(entity, out TransformComponent transform)) continue;
 
+            float worldX = transform.Position.X * Variables.PixelSize;
+            float worldY = transform.Position.Y * Variables.PixelSize;
+
+            float barWidth = 40;
+            float barHeight = 5;
+
+            float filled = (health.Current / health.Max) * barWidth;
+
+            // Position bar slightly above the entity
+            Vector2 barPos = new Vector2(worldX - barWidth / 2f, worldY - 100);
+
+            Raylib.DrawRectangle((int)barPos.X, (int)barPos.Y, (int)barWidth, (int)barHeight, Color.Red);
+            Raylib.DrawRectangle((int)barPos.X, (int)barPos.Y, (int)filled, (int)barHeight, Color.Green);
+            Raylib.DrawRectangleLines((int)barPos.X, (int)barPos.Y, (int)barWidth, (int)barHeight, Color.Black);
+        }
+    }
 
 
 

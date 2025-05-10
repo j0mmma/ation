@@ -7,11 +7,15 @@ namespace Ation.Game
     {
         public static void Main()
         {
-            Raylib.InitWindow(Raylib.GetMonitorWidth(0), Raylib.GetMonitorHeight(0), "Ation");
-            Raylib.ToggleFullscreen();
+            int screenWidth = Raylib.GetMonitorWidth(0);
+            int screenHeight = Raylib.GetMonitorHeight(0);
+
+            Console.WriteLine(screenHeight);
+            Console.WriteLine(screenWidth);
+
+            Raylib.InitWindow(screenWidth, screenHeight, "Ation");
             Raylib.SetTargetFPS(60);
 
-            // Start with the legacy simulation scene
             SceneManager.PushScene(new RougelikeScene());
 
             while (!Raylib.WindowShouldClose())

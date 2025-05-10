@@ -23,24 +23,7 @@ namespace Ation.Game
 
         public RougelikeScene()
         {
-            entityManager = new EntityManager();
-            playerEntity = entityManager.CreatePlayer(new Vector2(-15, 0));
-            var item = entityManager.CreateItem(new Vector2(-30, -10));
 
-            systems = new List<BaseSystem>
-            {
-                new StateSystem(),
-                new PlayerInputSystem(),
-                new GravitySystem(),
-                new MovementIntentSystem(),
-                new CollisionSystem(),
-                new PickupSystem(),
-                new ItemUseSystem(camera)
-            };
-
-
-            world = new World(Variables.ChunkSize);
-            sim = new FallingSandSim(world);
 
             camera = new Camera2D
             {
@@ -49,6 +32,27 @@ namespace Ation.Game
                 Zoom = 1.0f,
                 Rotation = 0f
             };
+
+            entityManager = new EntityManager();
+            playerEntity = entityManager.CreatePlayer(new Vector2(-15, 0));
+            var item = entityManager.CreateItem(new Vector2(-30, -10));
+
+            systems = new List<BaseSystem>
+            {
+                new StateSystem(),
+                new PlayerInputSystem(camera),
+                new GravitySystem(),
+                new MovementIntentSystem(),
+                new ProjectileSystem(),
+                new CollisionSystem(),
+                new PickupSystem(),
+                new ItemUseSystem(camera),
+                new DamageSystem(),
+            };
+
+
+            world = new World(Variables.ChunkSize);
+            sim = new FallingSandSim(world);
 
             LevelIO.Load("Assets/test_level_old.json", world);
             renderer = new Renderer(entityManager, world);
@@ -65,11 +69,6 @@ namespace Ation.Game
                 world.chunks.Clear();
                 LevelIO.Load("Assets/test_level.json", world);
             }
-
-
-            Vector2 mouseScreen = Raylib.GetMousePosition();
-            Vector2 mouseWorld = Raylib.GetScreenToWorld2D(mouseScreen, camera);
-
         }
 
 
@@ -101,6 +100,30 @@ namespace Ation.Game
 
 
             renderer.Render();
+
+            // draw line to cursor
+            if (entityManager.TryGetComponent(playerEntity, out TransformComponent playerTransform) &&
+                        entityManager.TryGetComponent(playerEntity, out ColliderComponent playerCol))
+            {
+                Vector2 playerOrigin = playerTransform.Position + playerCol.Offset + playerCol.Size * 0.5f;
+
+                Vector2 cursorWorld = Raylib.GetScreenToWorld2D(Raylib.GetMousePosition(), camera);
+
+                Vector2 originPx = playerOrigin * Variables.PixelSize;
+                Vector2 cursorPx = cursorWorld;
+
+                Raylib.DrawLineV(originPx, cursorPx, Color.Red);
+
+                Raylib.DrawCircleV(originPx, 2, Color.Blue);     // Player center
+                Raylib.DrawCircleV(cursorPx, 2, Color.Yellow);   // Cursor position
+
+
+                //Raylib.DrawText($"X:{cursorPx.X} Y:{cursorPx.Y}", (int)cursorPx.X + 12, (int)cursorPx.Y + 12, 16, Color.DarkGray);
+            }
+
+
+
+
             Raylib.EndMode2D();
 
             Raylib.DrawText($"FPS: {Raylib.GetFPS()}", 12, 12, 20, Color.Black);
@@ -135,14 +158,17 @@ namespace Ation.Game
             }
 
 
-            Vector2 mouse = Raylib.GetMousePosition();
 
             Vector2 mouseScreen = Raylib.GetMousePosition();
             Vector2 mouseWorld = Raylib.GetScreenToWorld2D(mouseScreen, camera);
             int gridX = (int)(mouseWorld.X / Variables.PixelSize);
             int gridY = (int)(mouseWorld.Y / Variables.PixelSize);
 
-            Raylib.DrawText($"X:{gridX} Y:{gridY}", (int)mouseScreen.X + 12, (int)mouseScreen.Y + 12, 16, Color.DarkGray);
+
+            int xPx = (int)mouseWorld.X;
+            int yPx = (int)mouseWorld.Y;
+
+            Raylib.DrawText($"X:{gridX} Y:{gridY} | {xPx}, {yPx}", (int)mouseScreen.X + 12, (int)mouseScreen.Y + 12, 16, Color.DarkGray);
 
         }
 

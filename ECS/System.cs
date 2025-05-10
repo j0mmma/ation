@@ -2,7 +2,7 @@ using System.Numerics;
 using Raylib_cs;
 using Ation.GameWorld;
 using Ation.Simulation;
-
+using Ation.Common;
 
 namespace Ation.Entities
 {
@@ -18,6 +18,13 @@ namespace Ation.Entities
         private const float JumpVelocity = -200f;
 
         public override string Name { get; set; } = "PlayerInputSystem";
+
+        private readonly Camera2D camera;
+
+        public PlayerInputSystem(Camera2D camera)
+        {
+            this.camera = camera;
+        }
 
         public override void Update(EntityManager em, float dt, World world)
         {
@@ -87,9 +94,30 @@ namespace Ation.Entities
                     }
                 }
 
+                if (Raylib.IsMouseButtonPressed(MouseButton.Left))
+                {
+                    var mouseWorld = Raylib.GetScreenToWorld2D(Raylib.GetMousePosition(), camera); // need camera here
+
+                    Console.WriteLine($"======={mouseWorld.X} - {mouseWorld.Y}");
+                    TryUseSelectedItem(em, entity, mouseWorld);
+                }
 
             }
         }
+
+        public static void TryUseSelectedItem(EntityManager em, Entity player, Vector2 cursorWorldPos)
+        {
+            if (!em.TryGetComponent(player, out InventoryComponent inventory)) return;
+
+            var item = inventory.Slots[inventory.SelectedIndex];
+            if (item == null) return;
+
+            if (em.TryGetComponent(item, out ItemComponent itemComp) && itemComp.UseAction != null)
+            {
+                itemComp.UseAction(em, player, item, cursorWorldPos);
+            }
+        }
+
 
     }
 
@@ -384,7 +412,7 @@ namespace Ation.Entities
         }
     }
 
-
+    // TODO: remove
     public class ItemUseSystem : BaseSystem
     {
         public override string Name { get; set; } = "ItemUseSystem";
@@ -397,19 +425,139 @@ namespace Ation.Entities
 
         public override void Update(EntityManager em, float dt, World world)
         {
-            if (!Raylib.IsMouseButtonPressed(MouseButton.Left)) return;
+            // if (!Raylib.IsMouseButtonPressed(MouseButton.Left)) return;
 
-            foreach (var (player, _) in em.GetAll<PlayerInputComponent>())
+            // foreach (var (player, _) in em.GetAll<PlayerInputComponent>())
+            // {
+            //     if (!em.TryGetComponent(player, out InventoryComponent inventory)) continue;
+
+            //     var item = inventory.Slots[inventory.SelectedIndex];
+            //     if (item == null) continue;
+
+            //     if (em.TryGetComponent(item, out ItemComponent itemComp) && itemComp.UseAction != null)
+            //     {
+            //         var mouseWorld = Raylib.GetScreenToWorld2D(Raylib.GetMousePosition(), camera);
+            //         itemComp.UseAction(em, player, item, mouseWorld);
+            //     }
+            // }
+        }
+    }
+
+    public class ProjectileSystem : BaseSystem
+    {
+        public override string Name { get; set; } = "ProjectileSystem";
+
+        public override void Update(EntityManager em, float dt, World world)
+        {
+            var projectiles = em.GetAll<ProjectileComponent>().ToList();
+
+            foreach (var (entity, proj) in projectiles)
             {
-                if (!em.TryGetComponent(player, out InventoryComponent inventory)) continue;
-
-                var item = inventory.Slots[inventory.SelectedIndex];
-                if (item == null) continue;
-
-                if (em.TryGetComponent(item, out ItemComponent itemComp) && itemComp.UseAction != null)
+                // Countdown lifetime
+                proj.Lifetime -= dt;
+                if (proj.Lifetime <= 0f)
                 {
-                    var mouseWorld = Raylib.GetScreenToWorld2D(Raylib.GetMousePosition(), camera);
-                    itemComp.UseAction(em, player, item, mouseWorld);
+                    em.DestroyEntity(entity);
+                    continue;
+                }
+
+                // Check world collision
+                if (proj.InteractsWithGeometry &&
+                        em.TryGetComponent(entity, out TransformComponent transform) &&
+                        HitsWorld(entity, em, world))
+                {
+                    ExplodeAt(em, transform.Position, entity, world);
+                    em.DestroyEntity(entity);
+                    continue;
+                }
+
+                // Check entity collision
+                if (proj.DestroyOnImpact &&
+                    em.TryGetComponent(entity, out TransformComponent posComp) &&
+                    HitsEntity(em, entity, posComp.Position))
+                {
+                    ExplodeAt(em, posComp.Position, entity, world);
+                    em.DestroyEntity(entity);
+                }
+            }
+        }
+
+        private bool HitsWorld(Entity entity, EntityManager em, World world)
+        {
+            //Console.WriteLine("===== in hits world=====");
+
+            if (!em.TryGetComponent(entity, out TransformComponent transform)) return false;
+            if (!em.TryGetComponent(entity, out ColliderComponent collider)) return false;
+
+            Vector2 min = transform.Position + collider.Offset;
+            Vector2 max = min + collider.Size;
+
+            for (int y = (int)MathF.Floor(min.Y); y <= (int)MathF.Floor(max.Y); y++)
+                for (int x = (int)MathF.Floor(min.X); x <= (int)MathF.Floor(max.X); x++)
+                    if (world.IsCollidableAt(x, y))
+                        return true;
+
+            return false;
+        }
+
+
+        private bool HitsEntity(EntityManager em, Entity self, Vector2 pos)
+        {
+            foreach (var (other, col) in em.GetAll<ColliderComponent>())
+            {
+                if (other.Id == self.Id) continue;
+                if (!em.TryGetComponent(other, out TransformComponent otherPos)) continue;
+
+                var bMin = otherPos.Position + col.Offset;
+                var bMax = bMin + col.Size;
+
+                bool overlap = pos.X >= bMin.X && pos.X <= bMax.X &&
+                               pos.Y >= bMin.Y && pos.Y <= bMax.Y;
+
+                if (overlap) return true;
+            }
+
+            return false;
+        }
+
+        private void ExplodeAt(EntityManager em, Vector2 position, Entity projectile, World world)
+        {
+            Console.WriteLine("===== in exlodeaAt=====");
+            if (!em.TryGetComponent(projectile, out DamageComponent dmg)) return;
+
+            // Deal AoE damage
+            ApplyAoEDamageAndImpulse(em, position, dmg.Amount, dmg.Radius, dmg.Source);
+
+            // Use simulation's explosion
+            var gridPos = Utils.WorldToGrid(position);
+            world.Explode((int)gridPos.X, (int)gridPos.Y, (int)dmg.Radius, 500f);
+
+            Console.WriteLine("++++++++ after world.explode=====");
+
+        }
+
+
+        private void ApplyAoEDamageAndImpulse(EntityManager em, Vector2 center, float baseDamage, float radius, Entity? source)
+        {
+            float sqrRadius = radius * radius;
+
+            foreach (var (target, health) in em.GetAll<HealthComponent>())
+            {
+                if (!em.TryGetComponent(target, out TransformComponent transform)) continue;
+
+                Vector2 toTarget = transform.Position - center;
+                float distSq = toTarget.LengthSquared();
+                if (distSq > sqrRadius) continue;
+
+                float falloff = 1f - MathF.Sqrt(distSq) / radius;
+                float damage = baseDamage * falloff;
+
+                health.Current -= damage;
+
+                if (em.TryGetComponent(target, out VelocityComponent vel))
+                {
+                    Vector2 impulse = Vector2.Normalize(toTarget) * 200f * falloff;
+                    vel.Velocity += impulse;
                 }
             }
         }
@@ -417,5 +565,52 @@ namespace Ation.Entities
 
 
 
-}
 
+    public class DamageSystem : BaseSystem
+    {
+        public override string Name { get; set; } = "DamageSystem";
+
+        public override void Update(EntityManager em, float dt, World world)
+        {
+            var damageSources = em.GetAll<DamageComponent>().ToList();
+
+            foreach (var (damageEntity, damageComp) in damageSources)
+            {
+                if (!em.TryGetComponent(damageEntity, out TransformComponent damagePos)) continue;
+
+                if (damageComp.Radius <= 0f)
+                {
+                    // Direct damage (apply to self or single target)
+                    if (em.TryGetComponent(damageEntity, out HealthComponent selfHealth))
+                    {
+                        selfHealth.Current -= damageComp.Amount;
+                        if (selfHealth.Current <= 0)
+                            em.DestroyEntity(damageEntity);
+                    }
+                }
+                else
+                {
+                    // Area of effect damage
+                    float sqrRadius = damageComp.Radius * damageComp.Radius;
+                    foreach (var (target, health) in em.GetAll<HealthComponent>())
+                    {
+                        if (!em.TryGetComponent(target, out TransformComponent targetPos)) continue;
+
+                        float distSq = Vector2.DistanceSquared(damagePos.Position, targetPos.Position);
+                        if (distSq > sqrRadius) continue;
+
+                        float falloff = 1f - MathF.Sqrt(distSq) / damageComp.Radius;
+                        float dmg = damageComp.Amount * falloff;
+
+                        health.Current -= dmg;
+                        if (health.Current <= 0)
+                            em.DestroyEntity(target);
+                    }
+                }
+
+                // Damage is one-time, remove component after applying
+                em.RemoveComponent<DamageComponent>(damageEntity);
+            }
+        }
+    }
+}

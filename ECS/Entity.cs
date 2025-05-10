@@ -4,6 +4,7 @@ using System.Numerics;
 using Raylib_cs;
 
 using Ation.Common;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Ation.Entities
 {
@@ -53,7 +54,7 @@ namespace Ation.Entities
 
 
             var colliderOffset = new Vector2(-colliderSize.X / 2f, -colliderSize.Y); // from feet
-            var renderableOffset = Vector2.Zero; // origin handled by DrawTexturePro
+            var renderableOffset = new Vector2(0, 0);
 
             var collider = new ColliderComponent(colliderSize, colliderOffset);
             var renderable = new RenderableComponent(texture, source, renderableOffset, scale);
@@ -68,6 +69,7 @@ namespace Ation.Entities
             AddComponent(player, collider);
             AddComponent(player, renderable);
             AddComponent(player, inventory);
+            AddComponent(player, new HealthComponent(100f));
 
             return player;
         }
@@ -116,17 +118,71 @@ namespace Ation.Entities
             AddComponent(item, new DropCooldownComponent());
             AddComponent(item, new ItemComponent((em, user, item, cursorPos) =>
             {
+                if (!em.TryGetComponent(user, out TransformComponent playerTransform))
+                    return;
 
-                Console.WriteLine("=======");
-                Console.WriteLine("=======");
-                Console.WriteLine("ItemUsed");
-                Console.WriteLine("=======");
-                Console.WriteLine("=======");
-                // Example: spawn explosion, heal player, shoot projectile, etc.
+                if (!em.TryGetComponent(user, out ColliderComponent playerCol))
+                    return;
+
+                // Accurate center of player collider in world units
+                Vector2 playerCenter = playerTransform.Position + playerCol.Offset + playerCol.Size * 0.5f;
+
+                Vector2 to = cursorPos;
+                Vector2 direction = to - playerCenter * Variables.PixelSize;
+
+                if (direction.LengthSquared() < 0.01f)
+                    direction = new Vector2(1, 0); // fallback
+
+                direction = Vector2.Normalize(direction);
+
+                // Spawn a bit in front of player center (10 world units forward)
+                Vector2 spawnPos = playerCenter + direction * 10f;
+
+                em.CreateProjectile(spawnPos, direction, user);
             }));
+
+
+
+
 
             return item;
         }
+
+        public Entity CreateProjectile(Vector2 position, Vector2 direction, Entity source)
+        {
+            var projectile = CreateEntity();
+
+            float scale = 0.3f; // consistent with item scaling
+            Vector2 baseSize = new Vector2(48, 48); // size in pixels from sprite
+            Vector2 worldSize = baseSize / Variables.PixelSize * scale; // scale to world units
+            Vector2 colliderSize = worldSize;
+            Vector2 colliderOffset = new Vector2(-colliderSize.X / 2f, -colliderSize.Y); // center-bottom
+            Vector2 renderOffset = Vector2.Zero;
+
+            Texture2D texture = Raylib.LoadTexture("Assets/Sprites/rpg_icons/spritesheet/spritesheet_48x48.png");
+            Rectangle sprite = new Rectangle(5 * 48, 9 * 48, 48, 48);
+
+            AddComponent(projectile, new TransformComponent(position, scale));
+            AddComponent(projectile, new VelocityComponent(direction * 350f));
+            //AddComponent(projectile, new GravityComponent(1000f));
+            AddComponent(projectile, new MovementIntentComponent());
+
+            AddComponent(projectile, new ColliderComponent(colliderSize, colliderOffset, CollisionType.Passive));
+            AddComponent(projectile, new RenderableComponent(texture, sprite, renderOffset, scale));
+
+            AddComponent(projectile, new ProjectileComponent(
+                direction,
+                500f,
+                3f,
+                true,
+                true
+            ));
+
+            AddComponent(projectile, new DamageComponent(50f, source));
+
+            return projectile;
+        }
+
 
 
 
