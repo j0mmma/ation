@@ -139,10 +139,17 @@ namespace Ation.GameWorld
             return chunks.Values;
         }
 
-        public void Explode(int cx, int cy, int radius, float force)
+        public void Explode(int x, int y, int radius, float force)
         {
-            var explosion = new Explosion(this, cx, cy, radius, force);
+            var resolved = Resolve(x, y);
+            if (resolved == null) return;
+
+            var (chunk, localX, localY) = resolved.Value;
+            Console.WriteLine($"[World.Explode] global ({x}, {y}) → chunk ({chunk.ChunkX}, {chunk.ChunkY}) local ({localX}, {localY})");
+
+            var explosion = new Explosion(chunk.Grid, localX, localY, radius, force);
             explosion.Enact();
         }
+
     }
 }

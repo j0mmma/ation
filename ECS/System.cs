@@ -491,7 +491,16 @@ namespace Ation.Entities
                     continue;
                 }
 
+                // Explode on geometry
                 if (!em.TryGetComponent(entity, out StateComponent state)) continue;
+
+                if (state.HitSolidWorld)
+                {
+                    Console.WriteLine($"++++Projectile {entity.Id} hit solid world");
+                    HandleWorldImpact(em, world, entity);
+                    continue;
+                }
+
                 if (state.HitEntity == null) continue;
 
                 var target = state.HitEntity;
@@ -508,9 +517,23 @@ namespace Ation.Entities
         }
 
 
+        private void HandleWorldImpact(EntityManager em, World world, Entity entity)
+        {
+            Console.WriteLine($"++++inside handle world impact");
+
+            if (!em.TryGetComponent(entity, out TransformComponent transform)) return;
+
+            Console.WriteLine($"[ProjectileSystem] Projectile {entity.Id} hit the world at {transform.Position}");
+
+            ExplodeAt(em, transform.Position, entity, world);
+
+            em.DestroyEntity(entity);
+        }
+
+
         private bool HitsWorld(Entity entity, EntityManager em, World world)
         {
-            //Console.WriteLine("===== in hits world=====");
+            Console.WriteLine("===== in hits world=====");
 
             if (!em.TryGetComponent(entity, out TransformComponent transform)) return false;
             if (!em.TryGetComponent(entity, out ColliderComponent collider)) return false;
@@ -552,13 +575,14 @@ namespace Ation.Entities
             if (!em.TryGetComponent(projectile, out DamageComponent dmg)) return;
 
             // Deal AoE damage
-            ApplyAoEDamageAndImpulse(em, position, dmg.Amount, dmg.Radius, dmg.Source);
+            //ApplyAoEDamageAndImpulse(em, position, dmg.Amount, dmg.Radius, dmg.Source);
 
             // Use simulation's explosion
             var gridPos = Utils.WorldToGrid(position);
-            world.Explode((int)gridPos.X, (int)gridPos.Y, (int)dmg.Radius, 500f);
+            world.Explode((int)position.X, (int)position.Y, 5, 100f);
 
-            Console.WriteLine("++++++++ after world.explode=====");
+            Console.WriteLine($"++++++++ explosion coords: {position.X}, {position.Y}=====");
+            Console.WriteLine($"++++++++ explosion grid: {gridPos.X}, {gridPos.Y}=====");
 
         }
 

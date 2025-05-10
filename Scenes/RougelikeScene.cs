@@ -71,6 +71,18 @@ namespace Ation.Game
                 world.chunks.Clear();
                 LevelIO.Load("Assets/test_level.json", world);
             }
+
+            Vector2 mouseScreen = Raylib.GetMousePosition();
+            Vector2 mouseWorld = Raylib.GetScreenToWorld2D(mouseScreen, camera);
+
+            if (Raylib.IsMouseButtonDown(MouseButton.Right))
+            {
+                Vector2 gridPos = Utils.WorldToGrid(mouseWorld);
+                int x = (int)gridPos.X;
+                int y = (int)gridPos.Y;
+
+                world.Explode(x, y, radius: 15, force: 400f);
+            }
         }
 
 
