@@ -14,7 +14,7 @@ namespace Ation.Game
         private int levelCounter = 0;
         private readonly World world;
         private readonly FallingSandSim sim;
-        private Renderer renderer;
+        //private Renderer renderer;
 
         private Tool selectedTool = Tool.Material;
         private MaterialType selectedMaterial = MaterialType.Sand;
@@ -25,9 +25,9 @@ namespace Ation.Game
         private const int minBrushRadius = 1;
         private const int maxBrushRadius = 20;
         private Camera2D camera;
-        private readonly EntityManager entityManager;
-        private readonly List<BaseSystem> systems;
-        private Entity playerEntity;
+        //private readonly EntityManager entityManager;
+        //private readonly List<BaseSystem> systems;
+        //private Entity playerEntity;
 
 
         private enum Tool { Material, Wand }
@@ -47,17 +47,17 @@ namespace Ation.Game
 
         public LegacyGameScene()
         {
-            entityManager = new EntityManager();
-            playerEntity = entityManager.CreatePlayer(new Vector2(-15, 0));
-            var item = entityManager.CreateItem(new Vector2(15, -10));
-            systems = new List<BaseSystem>
-            {
-                new StateSystem(),
-                new PlayerInputSystem(camera),
-                new GravitySystem(),
-                new MovementIntentSystem(),
-                new CollisionSystem()
-            };
+            //entityManager = new EntityManager();
+            //playerEntity = entityManager.CreatePlayer(new Vector2(-15, 0));
+            //var item = entityManager.CreateItem(new Vector2(15, -10));
+            // systems = new List<BaseSystem>
+            // {
+            //     new StateSystem(),
+            //     new PlayerInputSystem(camera),
+            //     new GravitySystem(),
+            //     new MovementIntentSystem(),
+            //     new CollisionSystem()
+            // };
 
 
             world = new World(Variables.ChunkSize);
@@ -71,21 +71,27 @@ namespace Ation.Game
                 Rotation = 0f
             };
             //DungeonGenerator.GenerateAndSave("Assets/test_level.json", Variables.ChunkSize, world.maxWorldSize);
-            LevelIO.Load("Assets/test_level_old.json", world);
+            //LevelIO.Load("Assets/test_level_old.json", world);
             //LevelIO.Load("Assets/test_level.json", world);
-            renderer = new Renderer(entityManager, world);
+            //renderer = new Renderer(entityManager, world);
 
         }
 
         public override void ProcessInput()
         {
+
+            if (Raylib.IsKeyPressed(KeyboardKey.Escape))
+            {
+                SceneManager.PopScene(); // go back to Main Menu
+                return;
+            }
             if (Raylib.IsKeyPressed(KeyboardKey.F5))
                 LevelIO.Save($"Assets/save_{levelCounter++}.json", world);
 
             if (Raylib.IsKeyPressed(KeyboardKey.F9))
             {
                 world.chunks.Clear();
-                LevelIO.Load("Assets/test_level.json", world);
+                //LevelIO.Load("Assets/level0.json", world);
             }
 
 
@@ -154,8 +160,8 @@ namespace Ation.Game
         {
             sim.Update(dt);
             world.RemoveEmptyChunks();
-            foreach (var system in systems)
-                system.Update(entityManager, dt, world);
+            //foreach (var system in systems)
+            //    system.Update(entityManager, dt, world);
 
         }
 
@@ -177,7 +183,7 @@ namespace Ation.Game
             Raylib.DrawRectangleLines(topLeftX, topLeftY, totalSizePx, totalSizePx, Color.Green);
 
 
-            renderer.Render();
+            //renderer.Render();
             Raylib.EndMode2D();
 
             Raylib.DrawText($"Material: {selectedMaterial}", 12, 60, 20, Color.Black);
@@ -186,15 +192,15 @@ namespace Ation.Game
             Raylib.DrawText($"Particles: {sim.CountMaterials()}", 12, 35, 20, Color.Black);
             Raylib.DrawText($"Chunks: {world.ChunkCount()}", 12, 110, 20, Color.Black);
             Raylib.DrawText($"Renderable chunks: {renderableChunks.Count()}", 12, 130, 20, Color.Black);
-            if (entityManager.TryGetComponent(playerEntity, out StateComponent state))
-            {
-                int y = 160; // Starting Y offset
-                Raylib.DrawText($"States:", 12, y, 20, Color.DarkGray); y += 22;
-                Raylib.DrawText($"InLiquid: {state.IsInLiquid}", 12, y, 20, Color.DarkGray); y += 20;
-                Raylib.DrawText($"InLava:   {state.IsInLava}", 12, y, 20, Color.DarkGray); y += 20;
-                Raylib.DrawText($"OnFire:   {state.IsOnFire}", 12, y, 20, Color.DarkGray); y += 20;
-                Raylib.DrawText($"FireTime: {state.FireDuration:0.00}", 12, y, 20, Color.DarkGray);
-            }
+            // if (entityManager.TryGetComponent(playerEntity, out StateComponent state))
+            // {
+            //     int y = 160; // Starting Y offset
+            //     Raylib.DrawText($"States:", 12, y, 20, Color.DarkGray); y += 22;
+            //     Raylib.DrawText($"InLiquid: {state.IsInLiquid}", 12, y, 20, Color.DarkGray); y += 20;
+            //     Raylib.DrawText($"InLava:   {state.IsInLava}", 12, y, 20, Color.DarkGray); y += 20;
+            //     Raylib.DrawText($"OnFire:   {state.IsOnFire}", 12, y, 20, Color.DarkGray); y += 20;
+            //     Raylib.DrawText($"FireTime: {state.FireDuration:0.00}", 12, y, 20, Color.DarkGray);
+            // }
 
 
 

@@ -4,6 +4,8 @@ using System.Numerics;
 using Raylib_cs;
 
 using Ation.Common;
+using System.Runtime.Serialization;
+using Ation.GameWorld;
 
 namespace Ation.Entities
 {
@@ -39,7 +41,7 @@ namespace Ation.Entities
             var player = CreateEntity();
 
             float scale = 1.1f;
-            var baseColliderSize = new Vector2(10, 16);
+            var baseColliderSize = new Vector2(6, 16);
             var colliderSize = baseColliderSize * scale;
             var transform = new TransformComponent(startPos);
             var velocity = new VelocityComponent(Vector2.Zero);
@@ -186,6 +188,7 @@ namespace Ation.Entities
             var health = new HealthComponent(100f);
             //health.Current = health.Max / 1.5f;
             AddComponent(enemy, health);
+            AddComponent(enemy, new AIComponent());
             //AddComponent(enemy, new DamageComponent(50f, enemy));
 
             return enemy;
@@ -206,7 +209,7 @@ namespace Ation.Entities
             Rectangle sprite = new Rectangle(5 * 48, 9 * 48, 48, 48);
 
             AddComponent(projectile, new TransformComponent(position, scale));
-            AddComponent(projectile, new VelocityComponent(direction * 150f));
+            AddComponent(projectile, new VelocityComponent(direction * 350f));
             AddComponent(projectile, new StateComponent());
             //AddComponent(projectile, new GravityComponent(1000f));
             AddComponent(projectile, new MovementIntentComponent());

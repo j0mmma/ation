@@ -14,9 +14,10 @@ namespace Ation.Game
             Console.WriteLine(screenWidth);
 
             Raylib.InitWindow(screenWidth, screenHeight, "Ation");
+            Raylib.SetExitKey(KeyboardKey.Null); // Prevent ESC from auto-closing window
             Raylib.SetTargetFPS(60);
 
-            SceneManager.PushScene(new RougelikeScene());
+            SceneManager.PushScene(new MainMenuScene());
 
             while (!Raylib.WindowShouldClose())
             {

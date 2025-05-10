@@ -21,7 +21,7 @@ namespace Ation.Game
         private Entity playerEntity;
 
 
-        public RougelikeScene()
+        public RougelikeScene(string mapPath)
         {
 
 
@@ -33,11 +33,16 @@ namespace Ation.Game
                 Rotation = 0f
             };
 
+
+
+            world = new World(Variables.ChunkSize);
+            sim = new FallingSandSim(world);
+
             entityManager = new EntityManager();
             playerEntity = entityManager.CreatePlayer(new Vector2(-15, 0));
             var item = entityManager.CreateItem(new Vector2(-30, -10));
 
-            entityManager.CreateEnemy(new Vector2(100, 0));
+            entityManager.CreateEnemy(new Vector2(100, 20));
 
             systems = new List<BaseSystem>
             {
@@ -49,27 +54,32 @@ namespace Ation.Game
                 new ProjectileSystem(),
                 new PickupSystem(),
                 new ItemUseSystem(camera),
+                new AISystem(playerEntity, world)
                 //new DamageSystem(),
             };
 
 
-            world = new World(Variables.ChunkSize);
-            sim = new FallingSandSim(world);
 
-            LevelIO.Load("Assets/test_level_old.json", world);
+            LevelIO.Load(mapPath, world);
             renderer = new Renderer(entityManager, world);
 
         }
 
         public override void ProcessInput()
         {
+
+            if (Raylib.IsKeyPressed(KeyboardKey.Escape))
+            {
+                SceneManager.PopScene(); // go back to Main Menu
+                return;
+            }
             if (Raylib.IsKeyPressed(KeyboardKey.F5))
                 LevelIO.Save($"Assets/save_{levelCounter++}.json", world);
 
             if (Raylib.IsKeyPressed(KeyboardKey.F9))
             {
                 world.chunks.Clear();
-                LevelIO.Load("Assets/test_level.json", world);
+                LevelIO.Load("Assets/rouge_level.json", world);
             }
 
             Vector2 mouseScreen = Raylib.GetMousePosition();
@@ -93,6 +103,13 @@ namespace Ation.Game
             foreach (var system in systems)
                 system.Update(entityManager, dt, world);
 
+
+            // if (entityManager.TryGetComponent(playerEntity, out TransformComponent transform) &&
+            //     entityManager.TryGetComponent(playerEntity, out ColliderComponent collider))
+            // {
+            //     Vector2 playerCenter = transform.Position + collider.Offset + collider.Size * 0.5f;
+            //     camera.Target = playerCenter * Variables.PixelSize;
+            // }
         }
 
         public override void Render()
@@ -134,9 +151,6 @@ namespace Ation.Game
 
                 //Raylib.DrawText($"X:{cursorPx.X} Y:{cursorPx.Y}", (int)cursorPx.X + 12, (int)cursorPx.Y + 12, 16, Color.DarkGray);
             }
-
-
-
 
             Raylib.EndMode2D();
 

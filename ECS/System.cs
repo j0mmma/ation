@@ -97,7 +97,7 @@ namespace Ation.Entities
                 if (Raylib.IsMouseButtonPressed(MouseButton.Left))
                 {
                     var mouseWorld = Raylib.GetScreenToWorld2D(Raylib.GetMousePosition(), camera); // need camera here
-
+                    //Vector2 relativeToPlayer = mouseWorld - camera.Target;
                     Console.WriteLine($"======={mouseWorld.X} - {mouseWorld.Y}");
                     TryUseSelectedItem(em, entity, mouseWorld);
                 }
@@ -184,6 +184,8 @@ namespace Ation.Entities
                 TryMove(entity, ref pos, moveY, ref velocity.Velocity, collider, world, em);
 
                 collider.IsGrounded = CheckGrounded(pos, collider, world);
+
+
 
                 position.Position = pos;
             }
@@ -579,7 +581,7 @@ namespace Ation.Entities
 
             // Use simulation's explosion
             var gridPos = Utils.WorldToGrid(position);
-            world.Explode((int)position.X, (int)position.Y, 5, 100f);
+            world.Explode((int)position.X, (int)position.Y, 8, 500f);
 
             Console.WriteLine($"++++++++ explosion coords: {position.X}, {position.Y}=====");
             Console.WriteLine($"++++++++ explosion grid: {gridPos.X}, {gridPos.Y}=====");
@@ -612,8 +614,6 @@ namespace Ation.Entities
             }
         }
     }
-
-
 
 
     public class DamageSystem : BaseSystem
@@ -663,4 +663,10 @@ namespace Ation.Entities
             }
         }
     }
+
+
 }
+
+
+
+

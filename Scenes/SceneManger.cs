@@ -45,5 +45,6 @@ namespace Ation.Game
         {
             scenes.Clear();
         }
+        public static int SceneCount => scenes.Count;
     }
 }

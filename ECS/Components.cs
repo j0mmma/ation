@@ -176,3 +176,11 @@ public class ProjectileComponent : Component
         DestroyOnImpact = destroyOnImpact;
     }
 }
+
+public class AIComponent : Component
+{
+    public float MoveSpeed = 30f;
+    public float JumpVelocity = -250f;
+    public float AggroRange = 150f;
+}
+

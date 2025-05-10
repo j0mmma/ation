@@ -148,6 +148,8 @@ namespace Ation.Simulation
             MaterialType.Stone => MaterialClass.ImmovableSolid,
             MaterialType.Eraser => MaterialClass.Eraser,
             MaterialType.Empty => MaterialClass.Empty,
+            MaterialType.Particle => MaterialClass.Empty,
+            MaterialType.FallingImmovable => MaterialClass.MovableSolid,
             _ => throw new ArgumentOutOfRangeException(nameof(type))
         };
     }
