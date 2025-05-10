@@ -4,7 +4,6 @@ using System.Numerics;
 using Raylib_cs;
 
 using Ation.Common;
-using System.Security.Cryptography.X509Certificates;
 
 namespace Ation.Entities
 {
@@ -69,7 +68,9 @@ namespace Ation.Entities
             AddComponent(player, collider);
             AddComponent(player, renderable);
             AddComponent(player, inventory);
-            AddComponent(player, new HealthComponent(100f));
+            var health = new HealthComponent(100f);
+            health.Current = health.Max;
+            AddComponent(player, health);
 
             return player;
         }
@@ -96,7 +97,7 @@ namespace Ation.Entities
             var gravity = new GravityComponent(300f);
 
             Texture2D texture = Raylib.LoadTexture("Assets/Sprites/rpg_icons/spritesheet/spritesheet_48x48.png");
-            Rectangle source = new Rectangle(0, 0, 48, 48);
+            Rectangle source = new Rectangle(0, 14 * 48, 48, 48);
 
             var colliderOffset = new Vector2(-colliderSize.X / 2f, -colliderSize.Y); // from feet
             var renderableOffset = Vector2.Zero;
@@ -148,6 +149,48 @@ namespace Ation.Entities
             return item;
         }
 
+        public Entity CreateEnemy(Vector2 position)
+        {
+            var enemy = CreateEntity();
+
+            float scale = 1.1f;
+            var baseColliderSize = new Vector2(6, 16);
+            var colliderSize = baseColliderSize * scale;
+            var transform = new TransformComponent(position);
+            var velocity = new VelocityComponent(Vector2.Zero);
+            var gravity = new GravityComponent(500f);
+            var state = new StateComponent();
+            var inventory = new InventoryComponent();
+
+            Texture2D texture = Raylib.LoadTexture("Assets/Sprites/Fire vizard/Idle.png");
+            Rectangle source = new Rectangle(128, 0, 128, 128);
+
+
+
+            var colliderOffset = new Vector2(-colliderSize.X / 2f - 5, -colliderSize.Y); // from feet
+            var renderableOffset = new Vector2(0, 0);
+
+            var collider = new ColliderComponent(colliderSize, colliderOffset);
+            var renderable = new RenderableComponent(texture, source, renderableOffset, scale);
+
+
+            // Add components
+            AddComponent(enemy, state);
+            AddComponent(enemy, transform);
+            AddComponent(enemy, velocity);
+            AddComponent(enemy, gravity);
+            //AddComponent(enemy, input);
+            AddComponent(enemy, collider);
+            AddComponent(enemy, renderable);
+            AddComponent(enemy, inventory);
+            var health = new HealthComponent(100f);
+            //health.Current = health.Max / 1.5f;
+            AddComponent(enemy, health);
+            //AddComponent(enemy, new DamageComponent(50f, enemy));
+
+            return enemy;
+        }
+
         public Entity CreateProjectile(Vector2 position, Vector2 direction, Entity source)
         {
             var projectile = CreateEntity();
@@ -163,7 +206,8 @@ namespace Ation.Entities
             Rectangle sprite = new Rectangle(5 * 48, 9 * 48, 48, 48);
 
             AddComponent(projectile, new TransformComponent(position, scale));
-            AddComponent(projectile, new VelocityComponent(direction * 350f));
+            AddComponent(projectile, new VelocityComponent(direction * 150f));
+            AddComponent(projectile, new StateComponent());
             //AddComponent(projectile, new GravityComponent(1000f));
             AddComponent(projectile, new MovementIntentComponent());
 
@@ -177,8 +221,9 @@ namespace Ation.Entities
                 true,
                 true
             ));
-
-            AddComponent(projectile, new DamageComponent(50f, source));
+            var dmg = new DamageComponent(20f, source);
+            AddComponent(projectile, dmg);
+            Console.WriteLine($"Added DamageComponent to projectile {projectile.Id} with amount {dmg.Amount}");
 
             return projectile;
         }

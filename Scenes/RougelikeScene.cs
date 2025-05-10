@@ -37,17 +37,19 @@ namespace Ation.Game
             playerEntity = entityManager.CreatePlayer(new Vector2(-15, 0));
             var item = entityManager.CreateItem(new Vector2(-30, -10));
 
+            entityManager.CreateEnemy(new Vector2(100, 0));
+
             systems = new List<BaseSystem>
             {
                 new StateSystem(),
                 new PlayerInputSystem(camera),
                 new GravitySystem(),
                 new MovementIntentSystem(),
-                new ProjectileSystem(),
                 new CollisionSystem(),
+                new ProjectileSystem(),
                 new PickupSystem(),
                 new ItemUseSystem(camera),
-                new DamageSystem(),
+                //new DamageSystem(),
             };
 
 

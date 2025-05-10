@@ -89,6 +89,9 @@ public class StateComponent : Component
 
     // Optional timers or intensity levels
     public float FireDuration = 0f;
+
+    public bool HitSolidWorld;
+    public Entity? HitEntity;
 }
 
 public class ItemComponent : Component

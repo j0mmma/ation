@@ -15,7 +15,7 @@ namespace Ation.Entities
     public class PlayerInputSystem : BaseSystem
     {
         private const float MoveSpeed = 50f;
-        private const float JumpVelocity = -200f;
+        private const float JumpVelocity = -250f;
 
         public override string Name { get; set; } = "PlayerInputSystem";
 
@@ -42,7 +42,7 @@ namespace Ation.Entities
                 if (Raylib.IsKeyPressed(KeyboardKey.W))
                 {
                     if (state.IsInLiquid)
-                        velocity.Velocity.Y = -50f;
+                        velocity.Velocity.Y = -70f;
                     else if (collider.IsGrounded)
                         velocity.Velocity.Y = JumpVelocity;
                 }
@@ -156,6 +156,7 @@ namespace Ation.Entities
         }
     }
 
+
     public class CollisionSystem : BaseSystem
     {
         public override string Name { get; set; } = "CollisionSystem";
@@ -167,6 +168,13 @@ namespace Ation.Entities
                 if (!em.TryGetComponent(entity, out TransformComponent position)) continue;
                 if (!em.TryGetComponent(entity, out VelocityComponent velocity)) continue;
                 if (!em.TryGetComponent(entity, out ColliderComponent collider)) continue;
+
+                // Clear state collision flags
+                if (em.TryGetComponent(entity, out StateComponent state))
+                {
+                    state.HitSolidWorld = false;
+                    state.HitEntity = null;
+                }
 
                 Vector2 pos = position.Position;
                 Vector2 moveX = new Vector2(intent.Delta.X, 0);
@@ -181,13 +189,26 @@ namespace Ation.Entities
             }
         }
 
-
         private void TryMove(Entity entity, ref Vector2 pos, Vector2 delta, ref Vector2 velocity, ColliderComponent collider, World world, EntityManager em)
         {
             Vector2 newPos = pos + delta;
+            Vector2 checkPos = newPos + collider.Offset;
 
-            bool hitsWorld = CollidesWithWorld(newPos + collider.Offset, collider.Size, world);
-            bool hitsEntities = CollidesWithEntities(entity, newPos + collider.Offset, collider.Size, em);
+            bool hitsWorld = CheckWorldCollision(checkPos, collider.Size, world);
+            bool hitsEntities = CheckEntityCollision(entity, checkPos, collider.Size, em, out var blockingEntity);
+            CheckEntityOverlap(entity, checkPos, collider.Size, em, out var overlappedEntity);
+            //Console.WriteLine($"++++in collision, hit entity: {hitsEntities}");
+
+            if (em.TryGetComponent(entity, out StateComponent state))
+            {
+                if (hitsWorld) state.HitSolidWorld = true;
+                if (blockingEntity != null)
+                {
+                    state.HitEntity = blockingEntity;
+                    Console.WriteLine($"!!!!!!!!!!!!!!!!hit entity: {state.HitEntity.Id}");
+                }
+                else if (overlappedEntity != null) state.HitEntity = overlappedEntity;
+            }
 
             if (!hitsWorld && !hitsEntities)
             {
@@ -195,16 +216,18 @@ namespace Ation.Entities
                 return;
             }
 
-            // Try stepping up by a small amount (e.g., 1–2 world units)
             if (delta.X != 0)
             {
-                const float maxStepHeight = 2f; // world units
+                const float maxStepHeight = 2f;
                 for (float step = 0.2f; step <= maxStepHeight; step += 0.2f)
                 {
-                    Vector2 stepUpPos = newPos - new Vector2(0, step); // try moving slightly up
-                    bool clear = !CollidesWithWorld(stepUpPos + collider.Offset, collider.Size, world) &&
-                                 !CollidesWithEntities(entity, stepUpPos + collider.Offset, collider.Size, em);
-                    if (clear)
+                    Vector2 stepUpPos = newPos - new Vector2(0, step);
+                    Vector2 stepCheck = stepUpPos + collider.Offset;
+
+                    bool clearWorld = !CheckWorldCollision(stepCheck, collider.Size, world);
+                    bool clearEntities = !CheckEntityCollision(entity, stepCheck, collider.Size, em, out _);
+
+                    if (clearWorld && clearEntities)
                     {
                         pos = stepUpPos;
                         return;
@@ -212,51 +235,10 @@ namespace Ation.Entities
                 }
             }
 
-            // Regular collision resolution
             if (delta.X != 0) velocity.X = 0;
             if (delta.Y != 0) velocity.Y = 0;
         }
 
-
-        private bool CollidesWithWorld(Vector2 pos, Vector2 size, World world)
-        {
-            int minX = (int)MathF.Floor(pos.X);
-            int maxX = (int)MathF.Floor(pos.X + size.X);
-            int minY = (int)MathF.Floor(pos.Y);
-            int maxY = (int)MathF.Floor(pos.Y + size.Y);
-
-            for (int y = minY; y <= maxY; y++)
-            {
-                for (int x = minX; x <= maxX; x++)
-                {
-                    if (world.IsCollidableAt(x, y)) return true;
-                }
-            }
-
-            return false;
-        }
-
-        private bool CollidesWithEntities(Entity self, Vector2 pos, Vector2 size, EntityManager em)
-        {
-            foreach (var (other, otherCollider) in em.GetAll<ColliderComponent>())
-            {
-                if (other.Id == self.Id) continue;
-                if (otherCollider.CollisionType != CollisionType.Solid) continue;
-                if (!em.TryGetComponent(other, out TransformComponent otherPos)) continue;
-
-                var aMin = pos;
-                var aMax = pos + size;
-                var bMin = otherPos.Position + otherCollider.Offset;
-                var bMax = bMin + otherCollider.Size;
-
-                bool overlap = !(aMax.X <= bMin.X || aMin.X >= bMax.X ||
-                                 aMax.Y <= bMin.Y || aMin.Y >= bMax.Y);
-
-                if (overlap) return true;
-            }
-
-            return false;
-        }
 
         private bool CheckGrounded(Vector2 pos, ColliderComponent collider, World world)
         {
@@ -264,7 +246,7 @@ namespace Ation.Entities
             float endX = startX + collider.Size.X;
             float probeY = pos.Y + collider.Offset.Y + collider.Size.Y + 0.5f;
 
-            for (float x = startX; x < endX; x += 0.2f) // small step for precision
+            for (float x = startX; x < endX; x += 0.2f)
             {
                 if (world.IsCollidableAt((int)x, (int)probeY))
                     return true;
@@ -272,27 +254,76 @@ namespace Ation.Entities
 
             return false;
         }
-        private bool CheckInLiquid(Vector2 pos, ColliderComponent collider, World world)
-        {
-            float startX = pos.X + collider.Offset.X;
-            float endX = startX + collider.Size.X;
-            float startY = pos.Y + collider.Offset.Y;
-            float endY = startY + collider.Size.Y;
 
-            for (float y = startY; y < endY; y += 1f)
-                for (float x = startX; x < endX; x += 0.5f)
-                {
-                    var material = world.Get((int)x, (int)y);
-                    if (material != null && MaterialFactory.GetClass(material.Type) == MaterialClass.Liquid)
-                        return true;
-                }
+        private bool CheckWorldCollision(Vector2 pos, Vector2 size, World world)
+        {
+            int minX = (int)MathF.Floor(pos.X);
+            int maxX = (int)MathF.Floor(pos.X + size.X);
+            int minY = (int)MathF.Floor(pos.Y);
+            int maxY = (int)MathF.Floor(pos.Y + size.Y);
+
+            for (int y = minY; y <= maxY; y++)
+                for (int x = minX; x <= maxX; x++)
+                    if (world.IsCollidableAt(x, y)) return true;
 
             return false;
         }
 
+        private bool CheckEntityCollision(Entity self, Vector2 pos, Vector2 size, EntityManager em, out Entity? hitEntity)
+        {
+            foreach (var (other, otherCol) in em.GetAll<ColliderComponent>())
+            {
+                if (other.Id == self.Id || otherCol.CollisionType != CollisionType.Solid) continue;
+                if (!em.TryGetComponent(other, out TransformComponent otherPos)) continue;
 
+                Vector2 aMin = pos;
+                Vector2 aMax = pos + size;
+                Vector2 bMin = otherPos.Position + otherCol.Offset;
+                Vector2 bMax = bMin + otherCol.Size;
+
+                bool overlap = !(aMax.X <= bMin.X || aMin.X >= bMax.X ||
+                                 aMax.Y <= bMin.Y || aMin.Y >= bMax.Y);
+
+                if (overlap)
+                {
+                    hitEntity = other;
+                    return true;
+                }
+            }
+
+            hitEntity = null;
+            return false;
+        }
+
+        private bool CheckEntityOverlap(Entity self, Vector2 pos, Vector2 size, EntityManager em, out Entity? overlapped)
+        {
+            foreach (var (other, otherCol) in em.GetAll<ColliderComponent>())
+            {
+                if (other.Id == self.Id) continue;
+                if (!em.TryGetComponent(other, out TransformComponent otherPos)) continue;
+
+                Vector2 aMin = pos;
+                Vector2 aMax = pos + size;
+                Vector2 bMin = otherPos.Position + otherCol.Offset;
+                Vector2 bMax = bMin + otherCol.Size;
+
+                bool overlap = !(aMax.X <= bMin.X || aMin.X >= bMax.X ||
+                                 aMax.Y <= bMin.Y || aMin.Y >= bMax.Y);
+
+                if (overlap)
+                {
+                    overlapped = other;
+                    return true;
+                }
+            }
+
+            overlapped = null;
+            return false;
+        }
 
     }
+
+
 
     public class StateSystem : BaseSystem
     {
@@ -453,7 +484,6 @@ namespace Ation.Entities
 
             foreach (var (entity, proj) in projectiles)
             {
-                // Countdown lifetime
                 proj.Lifetime -= dt;
                 if (proj.Lifetime <= 0f)
                 {
@@ -461,26 +491,22 @@ namespace Ation.Entities
                     continue;
                 }
 
-                // Check world collision
-                if (proj.InteractsWithGeometry &&
-                        em.TryGetComponent(entity, out TransformComponent transform) &&
-                        HitsWorld(entity, em, world))
-                {
-                    ExplodeAt(em, transform.Position, entity, world);
-                    em.DestroyEntity(entity);
-                    continue;
-                }
+                if (!em.TryGetComponent(entity, out StateComponent state)) continue;
+                if (state.HitEntity == null) continue;
 
-                // Check entity collision
-                if (proj.DestroyOnImpact &&
-                    em.TryGetComponent(entity, out TransformComponent posComp) &&
-                    HitsEntity(em, entity, posComp.Position))
-                {
-                    ExplodeAt(em, posComp.Position, entity, world);
-                    em.DestroyEntity(entity);
-                }
+                var target = state.HitEntity;
+
+                if (!em.TryGetComponent(target, out HealthComponent targetHealth)) continue;
+                if (!em.TryGetComponent(entity, out DamageComponent dmg)) continue;
+
+                targetHealth.Current -= dmg.Amount;
+                if (targetHealth.Current <= 0f)
+                    em.DestroyEntity(target);
+
+                em.DestroyEntity(entity);
             }
         }
+
 
         private bool HitsWorld(Entity entity, EntityManager em, World world)
         {
